@@ -1,6 +1,11 @@
 // Original reports derived from the authorized company view. Never infer or
 // expose competitors' private orders, customers, contracts or purchase records.
 export const operationalReports = {
+  profitability: ['Finances', 'Profitability metrics'],
+  procurementCosts: ['Purchases', 'Average purchase price and ordering costs'],
+  warehouseCosts: ['Inventory', 'Warehousing costs'],
+  waste: ['Inventory', 'Waste from inventories'],
+  utilization: ['Production', 'Shift salaries and capacity utilization'],
   income: ['Finances', 'Income statement'],
   companyIncome: ['Finances', 'Income statements, all companies'],
   balance: ['Finances', 'Balance sheet'],
@@ -110,6 +115,82 @@ export function buildOperationalReport(state, id, filters = {}) {
   const deliveryColumns = [col('Shipment'), col('Order'), date('Ordered'), col('Market'), col('Customer'), col('Product'), num('Quantity'), eur('Unit price'), eur('Value'), date('Dispatched'), date('Promised arrival'), date('Expected arrival'), date('Actual arrival'), col('Route'), eur('Freight cost'), num('Transport kg CO₂e'), num('Transport kg CO₂e/unit'), col('Arrival status')];
   const deliveryRows = rows => rows.map(s => { const o = orderMap.get(s.orderId) || {}; return [s.id, s.orderId, o.createdAt, market(o.marketId), o.customer, product, s.qty, o.price, s.revenue, s.dispatchedAt, o.dueAt, s.expectedAt, s.receivedAt, s.route, s.cost, s.carbon, ratio(s.carbon, s.qty), s.receivedAt == null ? 'In transit' : s.receivedAt > o.dueAt ? 'Late' : s.receivedAt < o.dueAt - 24 ? 'Early' : 'Within delivery window']; });
 
+  if (id === 'profitability') {
+    const revenue = -(a.revenue || 0), gross = revenue - (a.cogs || 0);
+    return make([eur('Revenue'), eur('Gross profit'), num('Gross margin (%)'), eur('Net profit'), num('Net margin (%)')],
+      [[revenue, gross, ratio(100 * gross, revenue), c.profit, ratio(100 * c.profit, revenue)]],
+      'Cumulative recognised amounts. Margins divide profit by revenue. A dash means no recognised revenue.');
+  }
+  if (id === 'procurementCosts') {
+    const automated = new Set(c.notices.filter(n => n.kind === 'automation').map(n => /^Purchase (purchase-\\d+) accepted/.exec(n.text)?.[1]));
+    const rows = group(purchases, p => p.item).map(([key, orders]) => {
+      // Legacy contracts stored the landed amount. Supplier fees are fixed for
+      // the session and successful automated orders have a corresponding notice.
+      let fees = 0;
+      for (const order of orders) {
+        const supplier = state.catalog.suppliers.find(s => s.name === order.supplier && s.item === key);
+        const fee = order.orderFee ?? (supplier && (automated.has(order.id) ? Math.round(supplier.fee / 2) : supplier.fee));
+        if (fee == null) { fees = null; break; }
+        fees += fee;
+      }
+      const units = sum(orders, o => o.qty), cost = sum(orders, o => o.cost);
+      return [item(key), orders.length, units, fees == null ? null : ratio(cost - fees, units), fees, cost];
+    });
+    return make([col('Component'), num('Orders'), num('Units ordered'), eur('Average purchase price / unit'), eur('Ordering costs'), eur('Total committed cost')], rows,
+      'Grouped by placement time. The quantity-weighted purchase price excludes ordering fees. Automatic replenishment receives a discounted fee.');
+  }
+  if (id === 'waste') {
+    const losses = (c.writeOffs || []).filter(row => during(row.hour));
+    return make([col('Item'), num('Units written off'), eur('Inventory value lost'), num('Embodied kg CO₂e discarded')],
+      Object.keys(c.inventory).map(key => {
+        const rows = losses.filter(row => row.item === key);
+        return [item(key), sum(rows, row => row.qty), sum(rows, row => row.value), sum(rows, row => row.carbon)];
+      }), 'Actual write-offs during the period. Record damaged or obsolete units under Ops → Inventory → Write off stock. Excess stock incurs storage charges but does not automatically expire.');
+  }
+  if (id === 'warehouseCosts') {
+    const history = buildOperationalReport(state, 'stockHistory', filters).rows;
+    const expansions = c.investments.filter(x => x.kind === 'warehouse' && x.activeAt != null);
+    const byName = new Map(Object.keys(c.inventory).map(key => [item(key), c.inventory[key].capacity]));
+    const rows = group(history, row => row[0]).map(([hour, stocks]) => {
+      const later = expansions.filter(x => x.activeAt > hour).length;
+      const excess = sum(stocks, ([, name, qty]) => {
+        let capacity = byName.get(name);
+        for (let i = 0; i < later; i++) capacity = Math.ceil(capacity / 1.5);
+        return Math.max(0, qty - capacity);
+      });
+      return [hour, excess, excess * 5];
+    });
+    return make([date('Daily close'), num('Units above storage capacity'), eur('Overflow storage charge')], rows,
+      'Each daily close charges €0.05 per unit above its own item capacity. General premises rent and capital investment in warehouse expansion are separate.');
+  }
+  if (id === 'utilization') {
+    const staffEvents = state.events.filter(e => e.companyId === c.id && e.type === 'staff' && e.status === 'completed');
+    const machines = c.investments.filter(x => x.kind === 'machine' && x.activeAt != null);
+    const schedules = state.events.filter(e => e.companyId === c.id && e.type === 'shifts' && e.status === 'completed');
+    let workers = c.workers - sum(staffEvents, e => e.data.delta), lines = c.machines - machines.length;
+    let shifts = schedules.length ? [true, false, false] : c.shifts;
+    const staffByHour = new Map(group(staffEvents, e => e.completedAt).map(([hour, events]) => [hour, sum(events, e => e.data.delta)]));
+    const linesByHour = new Map(group(machines, x => x.activeAt).map(([hour, events]) => [hour, events.length]));
+    const shiftsByHour = new Map(schedules.map(e => [e.completedAt, e.data.shifts]));
+    const wages = new Map(group(c.ledger.filter(l => l.description === 'Active shift wages'), l => Math.ceil(l.hour / 24) * 24)
+      .map(([hour, entries]) => [hour, sum(entries, l => l.lines.expense)]));
+    const output = new Map(state.snapshots.map(s => [s.hour, s.companies.find(x => x.id === c.id)?.production]));
+    const rows = [];
+    let scheduled = 0;
+    for (let hour = 1; hour <= state.hour; hour++) {
+      workers += staffByHour.get(hour) || 0;
+      lines += linesByHour.get(hour) || 0;
+      if (shifts[Math.floor(((hour - 1) % 24) / 8)]) scheduled += Math.min(workers * 2, lines * 6);
+      shifts = shiftsByHour.get(hour) || shifts;
+      if (hour % 24 === 0) {
+        const produced = output.get(hour) - (output.get(hour - 24) ?? 0);
+        if (during(hour) && Number.isFinite(produced)) rows.push([hour, wages.get(hour) || 0, produced, scheduled, ratio(100 * produced, scheduled)]);
+        scheduled = 0;
+      }
+    }
+    return make([date('Daily close'), eur('Production shift work salaries'), num('Units produced'), num('Scheduled capacity (units)'), num('Capacity utilization (%)')], rows,
+      'Actual output divided by scheduled staffed assembly capacity. Active hours use the lower of worker and machine capacity. A dash means no shift capacity was scheduled. Salaries are actual posted shift wages.');
+  }
   if (id === 'companyIncome') { const snapshot = state.snapshots.at(-1); return make([date('Daily close'), col('Company'), eur('Cumulative revenue'), eur('Cumulative net profit'), eur('Cumulative net costs')], snapshot ? snapshot.companies.map(x => [snapshot.hour, x.name, x.revenue, x.profit, x.revenue - x.profit]) : [], 'Shared financial summaries at the latest completed daily close. Individual competitor expense accounts are not shared. Net costs include interest income offsets.'); }
   if (id === 'keyFigures') return make([date('Daily close'), eur('Cash'), eur('Net profit'), eur('Revenue'), num('Production'), num('Inventory'), num('Electricity kWh'), num('Emissions kg CO₂e')], state.snapshots.filter(s => during(s.hour)).flatMap(s => { const x = s.companies.find(x => x.id === c.id); return x ? [[s.hour, x.cash, x.profit, x.revenue, x.production, x.inventory, x.energyKwh, x.emissions]] : []; }), 'Cumulative company metrics at each completed daily close.');
   if (id === 'supplierInfo') return make([col('Supplier'), col('Component'), eur('Unit price'), eur('Order fee'), num('Available stock'), num('Minimum order'), num('Lot size'), num('Lead time (h)'), num('Payment after receipt (h)'), num('Reliability (%)'), num('Component kg CO₂e/unit'), num('Freight kg CO₂e/unit')], state.catalog.suppliers.map(s => [s.name, item(s.item), s.price, s.fee, s.stock, s.min, s.lot, s.lead, s.term, s.reliability, s.carbon, s.freight]), 'Current catalogue, not historical contract terms.');
@@ -127,8 +208,9 @@ export function buildOperationalReport(state, id, filters = {}) {
     return make([col('Product'), num('Cumulative output'), eur('Production wages'), eur('Production electricity'), eur('Wages + electricity / produced unit')], [[product, c.production, wages, c.energyCost, ratio(wages + c.energyCost, c.production)]], 'Live period conversion costs, not a full absorption cost: excludes materials, depreciation and other overhead. Wages accrue during active shifts even if materials block output.');
   }
   if (id === 'stockHistory') {
-    const opening = Object.fromEntries(Object.entries(c.inventory).map(([key, value]) => [key, value.qty + (recipe[key] || 0) * c.production - (key === 'panel' ? c.production - sum(c.shipments, s => s.qty) : sum(c.purchases.filter(p => p.item === key && p.receivedAt != null), p => p.qty))]));
-    return make([date('Daily close'), col('Item'), num('Stock units')], state.snapshots.filter(s => during(s.hour)).flatMap(s => { const x = s.companies.find(x => x.id === c.id); if (!x) return []; return Object.keys(c.inventory).map(key => [s.hour, item(key), key === 'panel' ? x.inventory : opening[key] + sum(c.purchases.filter(p => p.item === key && p.receivedAt != null && p.receivedAt <= s.hour), p => p.qty) - (recipe[key] || 0) * x.production]); }), 'Finished stock from daily snapshots; component balances reconstructed from opening stock, actual purchase receipts and the fixed session recipe.');
+    const waste = c.writeOffs || [];
+    const opening = Object.fromEntries(Object.entries(c.inventory).map(([key, value]) => [key, value.qty + sum(waste.filter(w => w.item === key), w => w.qty) + (recipe[key] || 0) * c.production - (key === 'panel' ? c.production - sum(c.shipments, s => s.qty) : sum(c.purchases.filter(p => p.item === key && p.receivedAt != null), p => p.qty))]));
+    return make([date('Daily close'), col('Item'), num('Stock units')], state.snapshots.filter(s => during(s.hour)).flatMap(s => { const x = s.companies.find(x => x.id === c.id); if (!x) return []; return Object.keys(c.inventory).map(key => [s.hour, item(key), key === 'panel' ? x.inventory : opening[key] - sum(waste.filter(w => w.item === key && w.hour < s.hour), w => w.qty) + sum(c.purchases.filter(p => p.item === key && p.receivedAt != null && p.receivedAt <= s.hour), p => p.qty) - (recipe[key] || 0) * x.production]); }), 'Finished stock from daily snapshots; component balances reconstructed from opening stock, actual purchase receipts and the fixed session recipe.');
   }
   if (id === 'carbonDemand') {
     const intensity = c.inventory.panel.qty ? c.inventory.panel.carbon / c.inventory.panel.qty : 75;

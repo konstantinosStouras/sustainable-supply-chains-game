@@ -1,5 +1,5 @@
-import { createSession, applyCommand, tick, publicView, assertInvariants, fail } from './engine.mjs?v=494328aa3ba0';
-import { typingPresence } from './typing-presence.mjs?v=494328aa3ba0';
+import { createSession, applyCommand, tick, publicView, assertInvariants, fail } from './engine.mjs?v=6d0a76bc7770';
+import { typingPresence } from './typing-presence.mjs?v=6d0a76bc7770';
 
 // Shared simulation model; durable snapshots are managed by the worker.
 export class TestClassroom {

@@ -1,8 +1,8 @@
-import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=494328aa3ba0';
-import { createMessageSounds } from './src/message-sounds.mjs?v=494328aa3ba0';
-import { itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=494328aa3ba0';
-import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=494328aa3ba0';
-import { watchSession } from './src/session-updates.mjs?v=494328aa3ba0';
+import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=6d0a76bc7770';
+import { createMessageSounds } from './src/message-sounds.mjs?v=6d0a76bc7770';
+import { itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=6d0a76bc7770';
+import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=6d0a76bc7770';
+import { watchSession } from './src/session-updates.mjs?v=6d0a76bc7770';
 const root = document.querySelector('#app'), dialog = document.querySelector('#dialog');
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format((n || 0) / 100);
@@ -404,7 +404,7 @@ function renderWelcome() {
   }
 }
 async function getFirebase() {
-  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=494328aa3ba0')).firebase;
+  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=6d0a76bc7770')).firebase;
   return firebaseClient;
 }
 async function enterFirebase() {
@@ -470,7 +470,7 @@ async function testStudents() {
 }
 function testOwner() { return JSON.stringify([backend, firebaseClient?.user?.uid || user.id]); }
 async function savedTests(source) {
-  const client = (await import('./src/test-client.mjs?v=494328aa3ba0')).testClient();
+  const client = (await import('./src/test-client.mjs?v=6d0a76bc7770')).testClient();
   let saved;
   try { saved = await client.call('list',{owner:testOwner(),source}); } finally { client.close(); }
   modal('Saved test sessions', '<p>Saved on this device in this browser profile. Clearing site data removes these tests. Each session retains its students, decisions and results. Open a session to resume or delete it.</p>' + (saved.length ? table(['Session','Hour','Students',''],saved.map(s => {
@@ -487,7 +487,7 @@ async function startTestSetup(id) {
     // The first modal closes before its next form is opened.
     setTimeout(() => modal('Assign test students', '<p>Each student belongs to exactly one company. Choose 1–20 students per company (60 total maximum).</p>' + Array.from({length:count}, (_,i) => `<div class="form-grid">${field('company-'+i,'Company '+(i+1),template.companyNames[i] || 'Company '+(i+1),'text','maxlength="60"')}${field('students-'+i,'Test students', i === 0 ? 2 : 1,'number','min="1" max="20"')}</div>`).join(''), async f => {
       const groups = Array.from({length:count},(_,i) => ({name:f.get('company-'+i),students:value(f,'students-'+i)}));
-      const client = (await import('./src/test-client.mjs?v=494328aa3ba0')).testClient();
+      const client = (await import('./src/test-client.mjs?v=6d0a76bc7770')).testClient();
       try { await navigator.storage?.persist?.().catch(() => false); await client.create(template,groups,{owner:testOwner(),source:id}); await enterTest(client); } catch(e) {client.close();throw e;}
     }, 'Start test round'), 0);
   }, 'Choose students');
@@ -757,7 +757,7 @@ function orderedOperationalRows(data, id) {
 function operationalReportPanel(id) {
   const filters = reportFilters(id), data = buildOperationalReport(state, id, filters);
   const format = (value, column) => value == null ? '—' : column.type === 'time' ? simDate(value) : column.type === 'money' ? exactMoney(value) : column.type === 'number' ? precise(value) : String(value);
-  const live = ['income', 'companyIncome', 'balance', 'cashflow', 'payables', 'receivables', 'stock', 'quality', 'marketVolumes', 'marketShares', 'openOrders', 'supplierInfo', 'capacity', 'componentUsage', 'productionCost', 'carbonDemand'].includes(id);
+  const live = ['income', 'profitability', 'companyIncome', 'balance', 'cashflow', 'payables', 'receivables', 'stock', 'quality', 'marketVolumes', 'marketShares', 'openOrders', 'supplierInfo', 'capacity', 'componentUsage', 'productionCost', 'carbonDemand'].includes(id);
   const fixedDays = /(?:7|14)$/.test(id) ? (id.endsWith('7') ? 7 : 14) : 0;
   const marketFilter = ['Sales', 'Markets/Competitors'].includes(operationalReports[id][0]) && !['marketVolumes', 'marketShares', 'quality', 'componentPurchases'].includes(id);
   const controls = '<div class="toolbar operational-filters" data-report-id="' + id + '">' +
@@ -1088,7 +1088,8 @@ function inventoryPanel(embedded = false) {
         sortCell(stock.qty ? precise(stock.carbon / stock.qty) : '—', stock.qty ? stock.carbon / stock.qty : null)
       ];
     });
-  return panel(embedded ? '' : 'Inventory', '', `${buildSummary}${filters}<div class="inventory-table">${table(['Item', 'Amount / capacity', `Needed / ${product}`, 'Avg cost / unit', 'Ordered', 'kg CO₂e / unit'], rows, 'Select Finished or Components to show stock.')}</div><p class="form-note inventory-note">Counts reflect materials only. The forecast adds all outstanding purchases to today’s stock, assuming no stock is used before receipt. Stock above capacity costs €0.05 per excess unit per day.</p>`) + timeline;
+  const wasteAction = (solo || testRoom || health?.inventoryWriteOff) ? button('inventory-write-off', 'Write off stock', '', 'small', !permitted('purchasing') || !Object.values(c.inventory).some(stock => stock.qty > 0)) : '';
+  return panel(embedded ? '' : 'Inventory', '', `${buildSummary}${filters}<div class="inventory-table">${table(['Item', 'Amount / capacity', `Needed / ${product}`, 'Avg cost / unit', 'Ordered', 'kg CO₂e / unit'], rows, 'Select Finished or Components to show stock.')}</div><p class="form-note inventory-note">Counts reflect materials only. The forecast adds all outstanding purchases to today’s stock, assuming no stock is used before receipt. Stock above capacity costs €0.05 per excess unit per day.</p>${wasteAction}`) + timeline;
 }
 function suppliersPanel(embedded = false) {
   return `${panel(embedded ? '' : 'Supplier marketplace', 'All orders have a landed fixed fee. Supplier stock is shared across companies.', table(['Supplier / item', 'Unit price', 'Order fee', 'Lead / payment', 'Delivery accuracy', 'Component / freight CO₂e', 'Available / lot', ''], state.catalog.suppliers.filter(s => s.enabled).map(s => [`<strong>${esc(s.name)}</strong><small>${itemName(state, s.item)}</small>`, sortCell(exactMoney(s.price), s.price), sortCell(exactMoney(s.fee), s.fee), sortCell(`${s.lead} h / ${s.term} h<small>Payment after receipt</small>`, s.lead), sortCell(`${s.reliability}% on time<small>Up to ${s.maxDelay} h extra</small>`, s.reliability), sortCell(`${precise(s.carbon)} / ${precise(s.freight)} kg per unit<small>${precise(s.carbon + s.freight)} kg total per unit</small>`, s.carbon), sortCell(`${number(s.stock)}<small>Minimum ${s.min} · lot ${s.lot}</small>`, s.stock), button('purchase', 'Order', s.id, 'small', !permitted('purchasing'))])))}`;
@@ -1126,7 +1127,9 @@ function expenseBreakdown(ledger) {
 function inventoryStatementLines(company) {
   if (state.accounting?.inventoryStatement !== 'inventory-change') return `<div><span>Cost of goods sold</span><strong>${exactMoney(company.accounts.cogs)}</strong></div>`;
   const { purchases, inventoryChange } = inventoryStatementValues(company);
-  return `<div><span>Received material purchases</span><strong>${exactMoney(-purchases)}</strong></div><div><span>Change in inventory (including goods in transit to customers)</span><strong>${exactMoney(inventoryChange)}</strong></div>`;
+  const waste = (company.writeOffs || []).reduce((total, row) => total + row.value, 0);
+  const adjustment = waste ? '<div><span>Write-offs already charged to operating expenses (add back)</span><strong>' + exactMoney(waste) + '</strong></div>' : '';
+  return `<div><span>Received material purchases</span><strong>${exactMoney(-purchases)}</strong></div><div><span>Change in inventory (including goods in transit to customers)</span><strong>${exactMoney(inventoryChange)}</strong></div>${adjustment}`;
 }
 function financePage() {
   const c = company(), a = c.accounts;
@@ -1162,6 +1165,18 @@ function helpPage() {
     ${section('production', 'Production, staffing and investments', '<p>Each assembly line supports 6 modules/hour; each worker supports 2 modules/hour. Actual output is constrained by machines, workers, materials, warehouse space and available cash.</p><p>Choose the 00–08, 08–16 and 16–24 shifts. Schedule changes take effect at the next eight-hour boundary. Active-shift wages are paid even if materials run out. Staffing changes take 48 hours; a new assembly line takes 72 hours.</p><p>Investments can add capacity, warehouse space, energy efficiency or automation. They cost cash now and become usable after installation. Adding a machine will not help if materials or workers remain the bottleneck.</p><p>The dispatch assistant works on the oldest open order and selects a low-cost route that can meet the promise with a delay buffer. Check its next-action explanation rather than assuming installation means immediate dispatch.</p>')}
     ${section('energy', 'Energy, carbon, research and marketing', '<p>Compare electricity tariffs by shift, daily standing charges, switching fees, activation delays and carbon intensity. A new energy contract changes future production. Existing stock retains its embodied carbon.</p><p>Operational carbon includes received components and inbound transport, production electricity and outbound freight. Lower-carbon choices can affect customer demand when the instructor enables that preference.</p><p>Daily research gradually improves quality; daily marketing influences demand. Both create recurring costs. Review capacity before increasing demand, and compare the benefit with the cash commitment.</p>')}
     ${section('finance', 'Cash, profit, payments and financing', `<p><strong>Cash and profit are different.</strong> This session recognizes sales at ${state.accounting?.revenueAt === 'dispatch' ? 'dispatch' : 'customer receipt'}. Customer payment still follows actual receipt plus the accepted payment term. A shipped order can therefore be unpaid.</p><p>Finance separates receivables, supplier payables, debt, stock and locked deposits. Scheduled cash movements include committed events only, not all future wages, overhead or new trading. The transaction journal explains each posting.</p><p>Bullet loans fund after 24 hours; annuity loans after 48 hours. Review repayment dates and interest before borrowing. Term deposits lock cash until maturity with no early withdrawal. Keep enough liquidity for wages, freight, materials and scheduled obligations.</p><p>Daily rent, energy standing charges, budgets and depreciation affect profit. Depreciation is not a cash payment. If a due payment lacks cash, the obligation remains and is retried.</p>`)}
+    ${section('kpi-guide', 'Where to find company KPIs', table(['Management area', 'KPI', 'Open report'], [
+      ['Procurement and cost management', 'Average purchase price and ordering costs', 'procurementCosts'],
+      ['Inventory and warehousing', 'Inventory levels', 'stock'],
+      ['Inventory and warehousing', 'Warehousing costs', 'warehouseCosts'],
+      ['Inventory and warehousing', 'Waste from inventories', 'waste'],
+      ['Customer service and delivery', 'Open order backlog', 'openOrders'],
+      ['Customer service and delivery', 'Delivery accuracy (arrivals within the promised window)', 'reliability'],
+      ['Customer service and delivery', 'Transportation costs', 'transportCosts'],
+      ['Production and workforce management', 'Production shift work salaries and capacity utilization', 'utilization'],
+      ['Financial and performance metrics', 'Income statement', 'income'],
+      ['Financial and performance metrics', 'Gross profit, net profit and margins', 'profitability']
+    ].map(([area, measure, id]) => [area, measure, company() && studentPanelVisible('report-' + id, workspaceFeatureVisible) ? button('open-workspace-panel', operationalReports[id][1], 'report-' + id, 'small') : esc(operationalReports[id][1])])))}
     ${section('reports', 'Reports and performance', '<p>Operational panels show live state. Reports show frozen snapshots taken at each midnight close, so today’s decisions may not appear in the chart yet.</p><p>Choose a measure and time window, select companies to compare, and open the exact-values table when you need precise numbers. Export CSV uses the selected report and time window. Daily sales and production are changes between closes; cash, inventory and cumulative measures describe each close.</p><p>Judge decisions across profit, cash, delivery service and carbon together. A high cash balance alone does not show whether customer promises are being met.</p>')}
     ${section('messages', 'Messages, announcements and teamwork', '<p>Open <strong>Messages</strong> for one feed of instructor announcements, your team’s messages and conversations with the instructor. Each item names its conversation and sender.</p><p><strong>Show messages</strong> filters what you read. <strong>Send to</strong> chooses who receives your next message. Team messages stay inside your company; instructor conversations include your company and the instructor. Only instructors post class announcements.</p>')}
     ${section('troubleshooting', 'When an action does not work', '<ul><li><strong>Disabled control:</strong> check stock, feature permissions, pending changes and whether the session has ended.</li><li><strong>Production stopped:</strong> check the active shift, limiting component, staffing, machine capacity, storage and cash.</li><li><strong>State changed:</strong> review the refreshed quote before retrying. A confirmation is required before treating a decision as accepted.</li><li><strong>Connection interrupted:</strong> keep the draft and use the pending-decision retry to avoid duplicating a commitment.</li><li><strong>Temporary test round:</strong> keep a test tab open. Test decisions are not saved as permanent classroom records.</li></ul>')}
@@ -1366,7 +1381,7 @@ function messagesPage() {
   const canSend = (state.status !== 'completed' || isTeacher()) && state.features.messaging.allowed && !!recipient;
   return `<div class="toolbar">${select('channel', 'Show messages', options, channel)}${soundControl()}${company() ? button('business-updates', 'Business updates', '', 'small') : ''}<span class="form-note">Announcements and conversations appear together. Only messages available to your account are shown.</span></div>${panel(esc(options.find(x => x[0] === channel)?.[1]), 'Real and simulation times are shown separately.', `<div class="messages" data-view-key="messages">${messages.map(m => `<article class="message ${messageStyle(m)}"><div class="message-header">${m.channel === 'announcements' ? '<span>Instructor announcement</span>' : m.channel.startsWith('teacher:') ? `<span>${esc(labels.get(m.channel))}</span>` : ''}<span>${esc(m.senderName)}</span></div><div class="message-body">${m.role === 'instructor' ? renderMessageText(m.text) : `<p>${esc(m.text)}</p>`}</div><small>Real time: ${new Date(m.realAt).toLocaleString('en-GB')} · Simulation: ${simDate(m.hour)}</small></article>`).join('') || '<p class="empty">No messages in this view yet.</p>'}</div>${actor.role === 'student' && (channel === 'all' || channel === `team:${actor.companyId}`) ? '<p class="team-typing" data-team-typing role="status" aria-live="polite" aria-label="Team typing status"></p>' : ''}${canSend ? `<form id="message-form">${select('recipient', 'Send to', recipients, recipient)}<p class="form-note">Your message goes only to the selected conversation. Only instructors can post announcements.</p>${messageComposer()}${button('submit', 'Send message', '', 'primary')}<div class="error" role="alert"></div></form>` : '<p class="form-note">Messaging is read-only for your role or disabled.</p>'}`)}`;
 }
-const studentDecisionTypes = new Set(['offer', 'purchase', 'dispatch', 'shifts', 'staff', 'loan', 'deposit', 'energy', 'invest', 'reorder', 'budget']);
+const studentDecisionTypes = new Set(['offer', 'purchase', 'writeOff', 'dispatch', 'shifts', 'staff', 'loan', 'deposit', 'energy', 'invest', 'reorder', 'budget']);
 function decisionTiming(audit = state?.audit || []) {
   const players = new Map();
   for (const entry of audit) {
@@ -1682,7 +1697,7 @@ async function action(name, id) {
     return;
   }
   if (name === 'nav') { page = id; if (id === 'admin' && preview) { preview = undefined; await load(); } else render(); return; }
-  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=494328aa3ba0')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
+  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=6d0a76bc7770')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
   if (name === 'switch-solo') { solo.switchRole(isTeacher() ? 'student' : 'instructor'); preview = undefined; page = isTeacher() ? 'overview' : 'admin'; await load(); return; }
   if (name === 'demo') { await signIn(await api('/demo', { username: id })); return; }
   if (name === 'logout') { if (!solo && token) { try { await api('/logout', {}); } catch {} } if (firebaseClient?.user) await firebaseClient.logout(); solo = null; state = null; actor = null; user = null; token = ''; sessionId = null; sessionStorage.removeItem('studio-token'); selectSession(null); renderWelcome(); return; }
@@ -1696,6 +1711,13 @@ async function action(name, id) {
     modal('Edit sales offer', `<div class="form-grid">${field('price', 'Price per module (EUR)', o.price / 100, 'number', 'min="50" max="10000" step="0.01"')}${field('delivery', 'Delivery promise (hours)', o.delivery, 'number', 'min="6" max="720"')}${field('min', 'Minimum quantity', o.min, 'number', 'min="1"')}${field('max', 'Maximum quantity', o.max, 'number', 'min="1"')}${field('payment', 'Payment after receipt (hours)', o.payment, 'number', 'min="0" max="720"')}${check('enabled', 'Offer active', o.enabled)}</div>`, f => command({ type: 'offer', offerId: id, price: Math.round(value(f, 'price') * 100), delivery: value(f, 'delivery'), min: value(f, 'min'), max: value(f, 'max'), payment: value(f, 'payment'), enabled: f.has('enabled') }), 'Save offer');
   }
   if (name === 'dispatch') openDispatch(id);
+  if (name === 'inventory-write-off') {
+    const choices = Object.entries(company().inventory).filter(([, stock]) => stock.qty > 0)
+      .map(([item, stock]) => [item, itemName(state, item) + ' (' + number(stock.qty) + ' available)']);
+    if (choices.length) modal('Write off inventory', '<p>Discard damaged or obsolete stock. This permanently removes the units and charges their carrying value to operating expenses. Previously incurred emissions remain in the company footprint.</p>' +
+      select('item', 'Inventory item', choices, choices[0][0]) + field('qty', 'Units to write off', 1, 'number', 'min="1" step="1" required'),
+      data => command({ type: 'writeOff', item: data.get('item'), qty: value(data, 'qty') }), 'Confirm write-off');
+  }
   if (name === 'purchase') openPurchase(id);
   if (name === 'staff') modal('Change staffing', `<p class="form-note">${c.workers} current workers. Enter a positive number to recruit or negative to reduce. Recruitment costs €250 per worker; severance €500. Effective in 48 h.</p>${field('delta', 'Change in workers', 1, 'number', 'min="-20" max="20"')}`, f => command({ type: 'staff', delta: value(f, 'delta') }));
   if (name === 'annuity') modal('Request annuity loan', '<p class="form-note">Funding in 48 simulation hours. The first weekly payment is due one week after the request. Annual interest is 8%.</p>' + field('amount', 'Principal (EUR)', 10000, 'number', 'min="1000" max="150000" step="0.01"') + field('weeks', 'Term (weeks)', 2, 'number', 'min="1" max="20"'), f => command({ type: 'loan', plan: 'annuity', repaymentAnchor: 'request', amount: Math.round(value(f, 'amount') * 100), weeks: value(f, 'weeks') }));
@@ -1853,7 +1875,7 @@ document.addEventListener('change', async event => {
 async function startWorkspace() {
   if (location.hash?.startsWith('#test=')) {
     const testLink = new URLSearchParams(location.hash.slice(1));
-    try { const client = (await import('./src/test-client.mjs?v=494328aa3ba0')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
+    try { const client = (await import('./src/test-client.mjs?v=6d0a76bc7770')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
     catch(e) { root.innerHTML = '<main class="welcome"><h1>Test round unavailable</h1><p>' + esc(e.message) + '</p><div class="toolbar">' + (e.status === 403 ? button('retry-start', 'Try again', '', 'primary') : '') + button('test-leave','Return to classroom') + '</div></main>'; }
     return;
   }

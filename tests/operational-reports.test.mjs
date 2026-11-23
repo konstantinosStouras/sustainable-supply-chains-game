@@ -110,3 +110,43 @@ test('market demand report shows hourly Poisson rates and respects disabled and 
   assert.equal(report.rows[0][2], 20);
   assert.equal(report.rows[0][3], 14400);
 });
+
+test('manual write-offs reconcile stock, operating profit, embodied carbon and prior daily closes', () => {
+  const s = fixture(), c = s.companies[0], before = publicView(s, student);
+  const priorStock = buildOperationalReport(before, 'stockHistory').rows;
+  const stock = c.inventory.frame, previous = { ...stock };
+  const value = Math.round(stock.value * 2 / stock.qty);
+  applyCommand(s, student, { type: 'writeOff', item: 'frame', qty: 2 });
+  const after = publicView(s, student);
+  assert.equal(stock.qty, previous.qty - 2);
+  assert.equal(stock.value, previous.value - value);
+  assert.equal(after.company.profit, before.company.profit - value);
+  assert.equal(after.company.emissions, before.company.emissions);
+  const waste = buildOperationalReport(after, 'waste').rows.find(row => row[0] === 'Recycled frame');
+  assert.deepEqual(waste.slice(1), [2, value, previous.carbon * 2 / previous.qty]);
+  assert.deepEqual(buildOperationalReport(after, 'stockHistory').rows, priorStock);
+  assert.throws(() => applyCommand(s, student, { type: 'writeOff', item: 'frame', qty: stock.qty + 1 }));
+  assert.equal(c.writeOffs.length, 1);
+});
+
+test('KPI reports separate purchase fees, scheduled capacity, storage and profit margins', () => {
+  const s = createSession(), c = s.companies[0];
+  const supplier = s.catalog.suppliers.find(row => row.id === 'cell-circular');
+  applyCommand(s, student, { type: 'purchase', supplierId: supplier.id, qty: 240 });
+  applyCommand(s, student, { type: 'shifts', shifts: [true, true, false] });
+  c.inventory.frame.capacity = 100;
+  applyCommand(s, teacher, { type: 'step', hours: 24 });
+  const view = publicView(s, student);
+  assert.deepEqual(buildOperationalReport(view, 'procurementCosts').rows[0].slice(3),
+    [supplier.price, supplier.fee, supplier.price * 240 + supplier.fee]);
+  const legacy = structuredClone(view);
+  delete legacy.company.purchases[0].orderFee;
+  assert.deepEqual(buildOperationalReport(legacy, 'procurementCosts').rows, buildOperationalReport(view, 'procurementCosts').rows);
+  assert.deepEqual(buildOperationalReport(view, 'utilization').rows[0],
+    [24, 16 * 8 * 1350, 192, 192, 100]);
+  const excess = Math.max(0, c.inventory.frame.qty - 100);
+  assert.deepEqual(buildOperationalReport(view, 'warehouseCosts').rows[0], [24, excess, excess * 5]);
+  assert.equal(buildOperationalReport(view, 'profitability').rows[0][2], null);
+  applyCommand(s, student, { type: 'writeOff', item: 'frame', qty: 1 });
+  assert.deepEqual(buildOperationalReport(publicView(s, student), 'warehouseCosts').rows[0], [24, excess, excess * 5]);
+});

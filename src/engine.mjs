@@ -144,10 +144,11 @@ function purchase(s, c, a, automated = false) {
   if (sup.stock < qty) fail(`Supplier has only ${sup.stock} units available.`);
   const inFlight = sum(c.purchases.filter(p => p.item === sup.item && p.receivedAt === null).map(p => p.qty));
   if (c.inventory[sup.item].qty + inFlight + qty > c.inventory[sup.item].capacity * 2) fail('Purchase would exceed the hard storage limit (twice base capacity including incoming stock).');
-  const cost = qty * sup.price + (automated ? Math.round(sup.fee / 2) : sup.fee);
+  const orderFee = automated ? Math.round(sup.fee / 2) : sup.fee;
+  const cost = qty * sup.price + orderFee;
   const commitments = -balance(c, 'payable');
   if (cost + commitments > balance(c, 'cash') + 8000000) fail('Supplier credit limit exceeded: cash plus €80,000 less current payables.');
-  const p = { id: uid(s, 'purchase'), supplier: sup.name, item: sup.item, qty, cost, carbon: qty * (sup.carbon + sup.freight), orderedAt: s.hour, expectedAt: s.hour + sup.lead, receivedAt: null, paidAt: null, term: sup.term };
+  const p = { id: uid(s, 'purchase'), supplier: sup.name, item: sup.item, qty, orderFee, cost, carbon: qty * (sup.carbon + sup.freight), orderedAt: s.hour, expectedAt: s.hour + sup.lead, receivedAt: null, paidAt: null, term: sup.term };
   sup.stock -= qty; c.purchases.push(p);
   post(s, c, `Purchase committed: ${p.id}`, { inbound: cost, payable: -cost });
   schedule(s, c, 'purchaseReceipt', p.expectedAt + sampleDelay(s, sup), { purchaseId: p.id }, `${qty} ${itemName(s, p.item)} arrive from ${sup.name}`);
@@ -250,10 +251,18 @@ export function applyCommand(s, actor, a, realAt = '2026-01-01T00:00:00.000Z', {
   } else {
     if (s.status === 'completed') fail('Session completed. Final reports remain available; new decisions are disabled.', 409);
     const c = requireCompany(s, actor, a);
-    const groups = { offer: 'offers', purchase: 'purchasing', dispatch: 'offers', shifts: 'production', staff: 'production', loan: 'finance', deposit: 'finance', energy: 'energy', invest: 'investments', reorder: 'investments', budget: 'investments' };
+    const groups = { offer: 'offers', purchase: 'purchasing', writeOff: 'purchasing', dispatch: 'offers', shifts: 'production', staff: 'production', loan: 'finance', deposit: 'finance', energy: 'energy', invest: 'investments', reorder: 'investments', budget: 'investments' };
     if (!Object.hasOwn(groups, a.type)) fail('Unknown command.');
     if (!s.features[groups[a.type]].allowed) fail(`The instructor has disabled ${groups[a.type]} decisions.`, 403);
     if (a.type === 'purchase') result = purchase(s, c, a);
+    if (a.type === 'writeOff') {
+      if (!Object.hasOwn(c.inventory, a.item)) fail('Choose an inventory item.');
+      const qty = integer(a.qty, 'Write-off quantity', 1, c.inventory[a.item].qty);
+      const removed = takeStock(c, a.item, qty);
+      post(s, c, 'Inventory write-off', { expense: removed.value, inventory: -removed.value });
+      (c.writeOffs ??= []).push({ hour: s.hour, item: a.item, qty, value: removed.value, carbon: removed.carbon });
+      result = 'Inventory written off at its weighted-average carrying value.';
+    }
     if (a.type === 'dispatch') result = dispatch(s, c, a);
     if (a.type === 'offer') {
       const offer = c.offers.find(x => x.id === a.offerId); if (!offer) fail('Offer not found.');
