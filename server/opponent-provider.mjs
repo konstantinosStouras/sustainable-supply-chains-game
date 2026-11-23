@@ -33,7 +33,7 @@ export async function opponentProvider(user, input, operation, request = fetch) 
       const page = await call(path);
       for (const item of page.data ?? page.models ?? page.output?.models ?? []) {
         const id = item.model ?? item.id ?? item.name?.replace(/^models\//, '');
-        if (typeof id === 'string') models.add(id);
+        if (typeof id === 'string' && !item.is_deprecated && !item.deprecated && !item.deprecation && !['deprecated','retired'].includes(item.status)) models.add(id);
       }
       if (provider === 'alibaba') {
         const { page_no, page_size, total } = page.output || {};
