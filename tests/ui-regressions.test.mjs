@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { randomUUID } from 'node:crypto';
-import { applyCommand, createSession, itemName, productionRecipe } from '../src/engine.mjs';
+import { products, applyCommand, createSession, itemName, productionRecipe } from '../src/engine.mjs';
 
 // Unit harness for the original UI functions. It does not open a browser or
 // access a real service. The coordinator separately verifies rendered behavior.
@@ -23,7 +23,7 @@ function harness(hostname = 'localhost') {
     document, localStorage: storage(), sessionStorage: storage(), crypto: { randomUUID },
     setTimeout: () => 1, clearTimeout: () => {}, URL, AbortSignal,
     FormData: class extends Map { constructor(form) { super(form.values); } },
-    operationalReports, buildOperationalReport, businessUpdates, createMessageSounds, applyCommand, createSession, itemName, productionRecipe, INVESTMENTS: {}, FEATURES: [], firebaseConfig: {}, classroomBackend: 'https://classroom.example', location: { hostname, href: 'https://' + hostname + '/' }, renderCount: 0,
+    operationalReports, buildOperationalReport, businessUpdates, createMessageSounds, products, applyCommand, createSession, itemName, productionRecipe, INVESTMENTS: {}, FEATURES: [], firebaseConfig: {}, classroomBackend: 'https://classroom.example', location: { hostname, href: 'https://' + hostname + '/' }, renderCount: 0,
     activeTestForm: null
   });
   context.history = { replaceState: (_, __, href) => { context.location.href = href; } };
@@ -193,7 +193,7 @@ test('dispatch with no routes gives an explanation instead of building an invali
 test('dispatch with no finished stock gives an explanation instead of a zero-quantity form', () => {
   const h = harness();
   h.run("state.company = {orders:[{id:'order-1'}],inventory:{panel:{qty:0}}}; state.catalog = { routes:[{enabled:true}] }; modal = (title, body) => { modalResult = {title,body}; }; openDispatch('order-1');");
-  assert.match(h.run('modalResult.title'), /No modules available/);
+  assert.match(h.run('modalResult.title'), /No units available/);
   assert.match(h.run('modalResult.body'), /order remains open/);
 });
 
@@ -664,7 +664,7 @@ test('market editor submits fractional hourly λ and explains shared live demand
   h.run("state = createSession(); modal = (title, body, submit) => { marketModal = {title,body,submit}; }; command = async cmd => { marketCommand = cmd; };");
   await h.run("action('catalog-edit', 'markets:local')");
   const body = h.run('marketModal.body');
-  assert.match(body, /Demand rate λ \(modules \/ simulation hour\)/);
+  assert.match(body, /Demand rate λ \(units \/ simulation hour\)/);
   assert.match(body, /step="any"/);
   assert.match(body, /across all teams/);
   assert.match(body, /next simulation hour/);

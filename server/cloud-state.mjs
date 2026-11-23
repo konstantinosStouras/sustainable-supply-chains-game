@@ -27,7 +27,7 @@ export function decodeStateWithSize(chunks, metadata) {
 // function instances or the scheduled worker from advancing the same hour twice.
 export function advanceCloudClock(state, nextTickAt, now, limit = 24) {
   const records = [];
-  if (state.status !== 'running') return { nextTickAt: null, records };
+  if (!state.productId || state.status !== 'running') return { nextTickAt: null, records };
   let due = nextTickAt ?? now + state.secondsPerHour * 1000;
   while (state.status === 'running' && due <= now && records.length < limit) {
     const realAt = new Date(due).toISOString();

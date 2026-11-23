@@ -70,7 +70,7 @@ export class Store {
     if (user.role === 'student') requireReadable(this.session(id));
     return { ...user, companyId: member.companyId };
   }
-  list(user) { return this.db.prepare('SELECT s.state,m.companyId FROM sessions s JOIN members m ON m.sessionId=s.id WHERE m.userId=? ORDER BY s.rowid DESC').all(user.id).map(row => { const s = JSON.parse(row.state); return { id: s.id, name: s.name, hour: s.hour, status: s.status, companyId: row.companyId }; }).filter(s => s.status !== 'deleted'); }
+  list(user) { return this.db.prepare('SELECT s.state,m.companyId FROM sessions s JOIN members m ON m.sessionId=s.id WHERE m.userId=? ORDER BY s.rowid DESC').all(user.id).map(row => { const s = JSON.parse(row.state); return { id: s.id, name: s.name, hour: s.hour, status: s.productId || s.status === 'deleted' ? s.status : 'archived', companyId: row.companyId }; }).filter(s => s.status !== 'deleted'); }
   create(user, opts = {}) {
     if (user.role !== 'instructor') fail('Instructor access required.', 403);
     return this.transaction(() => {

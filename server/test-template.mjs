@@ -1,7 +1,7 @@
 // Explicit setup allowlist: no student accounts, messages, decisions or history.
 export function testTemplate(initial, current) {
   return structuredClone({
-    name: current.name, seed: initial.seed,
+    productId: initial.productId ?? 'earbuds', name: current.name, seed: initial.seed,
     days: Math.max(1, Math.ceil((current.plannedEndHour || current.endHour || initial.endHour) / 24)),
     companyNames: current.companies.map(c => c.name),
     revenueAt: initial.accounting?.revenueAt || 'receipt',
@@ -11,7 +11,7 @@ export function testTemplate(initial, current) {
     startingPrices: initial.accounting?.startingPrices ?? {},
     inventoryStatement: initial.accounting?.inventoryStatement ?? 'cogs',
     openingUnitCosts: initial.accounting?.openingUnitCosts ?? {},
-    features: current.features, effects: current.effects, catalog: current.catalog,
-    recipe: initial.recipe, secondsPerHour: current.secondsPerHour
+    features: current.features, effects: current.effects, catalog: initial.productId ? current.catalog : undefined,
+    recipe: initial.productId ? initial.recipe : undefined, secondsPerHour: current.secondsPerHour
   });
 }

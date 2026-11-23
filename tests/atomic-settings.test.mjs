@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../app.mjs', import.meta.url),'utf8');
 const settings = vm.runInNewContext(source.slice(source.indexOf('function sessionSettingsCommand('),source.indexOf('function closeMobileMenu('))+'\nsessionSettingsCommand');
 // Plain in-memory command inputs only: no stores, session/account creation, network, or downloads.
 const form = (speed='12') => new Map([['days',String(103/24)],['name','Updated'],['speed',speed],['studentAccess','on']]);
-const input = status => ({status,hour:103,endHour:status==='completed'?103:240,secondsPerHour:4,companies:[],events:[],audit:[],revision:0,sequence:0});
+const input = status => ({productId:'earbuds',status,hour:103,endHour:status==='completed'?103:240,secondsPerHour:4,companies:[],events:[],audit:[],revision:0,sequence:0});
 test('one settings command saves speed and name while preserving closed state',()=>{
  const data=input('completed'); const command=settings(data,form());
  assert.equal(command.secondsPerHour,12); assert.equal(Object.hasOwn(command,'endHour'),false);

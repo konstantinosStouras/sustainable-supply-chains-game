@@ -87,7 +87,7 @@ export class FirestoreStore {
     const encoded = encodeState(state), { chunks, ...info } = encoded;
     chunks.forEach((data, i) => tx.set(ref.collection('stateChunks').doc(String(i)), { data }));
     for (let i = chunks.length; i < (metadata.chunkCount || 0); i++) tx.delete(ref.collection('stateChunks').doc(String(i)));
-    tx.set(ref, { ...metadata, ...info, chunkCount: chunks.length, id: state.id, name: state.name, hour: state.hour, status: state.status, studentAccess: state.studentAccess !== false, messaging: state.features.messaging, revision: state.revision, nextTickAt });
+    tx.set(ref, { ...metadata, ...info, chunkCount: chunks.length, productId: state.productId ?? null, id: state.id, name: state.name, hour: state.hour, status: state.status, studentAccess: state.studentAccess !== false, messaging: state.features.messaging, revision: state.revision, nextTickAt });
   }
   log(tx, ref, actor, command, realAt, revision) {
     tx.create(ref.collection('commands').doc(String(revision).padStart(12, '0')), { actor, command, realAt, revision });
@@ -103,7 +103,7 @@ export class FirestoreStore {
     const members = await this.members.where('userId', '==', user.id).get();
     if (members.empty) return [];
     const docs = await this.db.getAll(...members.docs.map(m => this.sessionRef(m.data().sessionId)));
-    return docs.flatMap((doc, i) => doc.exists && doc.data().status !== 'deleted' ? [{ id: doc.id, name: doc.data().name, hour: doc.data().hour, status: doc.data().status, companyId: members.docs[i].data().companyId, createdAt: doc.data().createdAt }] : []).sort((a, b) => b.createdAt - a.createdAt);
+    return docs.flatMap((doc, i) => doc.exists && doc.data().status !== 'deleted' ? [{ id: doc.id, name: doc.data().name, hour: doc.data().hour, status: doc.data().productId ? doc.data().status : 'archived', companyId: members.docs[i].data().companyId, createdAt: doc.data().createdAt }] : []).sort((a, b) => b.createdAt - a.createdAt);
   }
   async create(user, opts = {}) {
     if (user.role !== 'instructor') fail('Instructor access required.', 403);
@@ -183,7 +183,7 @@ export class FirestoreStore {
   }
   async currentViewSnapshot(user, id) {
     let snapshot = await this.readViewSnapshot(user, id);
-    const isDue = value => value.state.status === 'running' && value.nextTickAt != null && value.nextTickAt <= this.now();
+    const isDue = value => value.state.productId && value.state.status === 'running' && value.nextTickAt != null && value.nextTickAt <= this.now();
     if (isDue(snapshot)) {
       await this.catchUpViewClock(id);
       // Membership and access can change while the clock transaction waits.

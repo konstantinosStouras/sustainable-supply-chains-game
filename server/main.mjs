@@ -92,7 +92,7 @@ export function createApp({ store = new Store(process.env.DATA_PATH || '.data/si
     const rows = store.db.prepare('SELECT id,state FROM sessions').all();
     for (const row of rows) {
       const s = JSON.parse(row.state);
-      if (s.status !== 'running') { next.delete(s.id); continue; }
+      if (!s.productId || s.status !== 'running') { next.delete(s.id); continue; }
       if (!next.has(s.id)) next.set(s.id, Date.now() + s.secondsPerHour * 1000);
       if (Date.now() >= next.get(s.id)) {
         try { store.runTick(s.id); } catch (error) { console.error('Clock stopped:', error.message); s.status = 'paused'; store.save(s); }

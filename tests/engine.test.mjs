@@ -142,9 +142,9 @@ test('daily cutoff is immutable and exact completion retains future obligations'
 test('production respects materials and machine/staff bottlenecks', () => {
   const s = createSession(), c = s.companies[0]; advance(s, 1);
   assert.equal(c.production, 12);
-  assert.equal(c.inventory.cell.qty, 14400 - 12 * 32);
-  assert.equal(c.inventory.frame.qty, 600 - 12);
-  assert.equal(c.inventory.controller.qty, 600 - 12 * 2);
+  assert.equal(c.inventory.cell.qty, 14400 - 12);
+  assert.equal(c.inventory.frame.qty, 600 - 12 * 2);
+  assert.equal(c.inventory.controller.qty, 600 - 12);
   assertInvariants(s);
   const before = c.production; c.shifts = [false, false, false]; advance(s, 1); assert.equal(c.production, before);
 });
