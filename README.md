@@ -2,7 +2,7 @@
 
 An original sustainability/business simulation with an authoritative hourly engine, instructor controls, student companies, durable messages, a double-entry ledger, and data-driven daily plots.
 
-- Main website: https://www.stouras.com/realgame-sustainability-simulation/
+- Main website: https://www.stouras.com/sustainability-simulation/
 - Firebase project: `stouras-sustainability-2026`
 - Firebase hosted interface: https://stouras-sustainability-2026.web.app/
 - [Economic rules and teaching guide](notes/model.md)
@@ -79,7 +79,7 @@ GitHub Pages serves the root of `main` at the existing subpath. Assets are relat
 - `notes/`: public project notes and independently specified rules.
 - `private/`: ignored reference materials and local working records; never publish.
 
-This project is independent of RealGame. It uses no RealGame services, credentials, copied bundles, screenshots, or teaching materials. See the model guide for simplified rules and material v1 limits.
+See the model guide for simplified rules and material v1 limits.
 
 ### Session links and student entry
 

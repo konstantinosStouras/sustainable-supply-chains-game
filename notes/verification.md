@@ -1,6 +1,6 @@
 # Implementation verification — 12 November 2026
 
-This record covers the original Sustainability Studio implementation, not the private reference simulation.
+This record covers the original Sustainability Studio implementation.
 
 ## Automated checks
 
@@ -21,7 +21,7 @@ The frontend and server pass Node syntax checks. The installed Firebase Admin SD
 - Inspected the published solo sandbox at desktop and narrow mobile widths. It uses the original engine and explicitly labels its browser-local state.
 - Published the static interface on Firebase Hosting and verified the existing GitHub Pages build completed successfully.
 
-The [original overview screenshot](screenshots/studio-overview.jpg) contains only synthetic demonstration state. It is not a copied reference screenshot.
+The [original overview screenshot](screenshots/studio-overview.jpg) contains only synthetic demonstration state.
 
 ## Deployment boundary
 
@@ -45,24 +45,8 @@ Live deployed API checks used real Firebase-signed instructor, student, outsider
 
 Function build-image retention is seven days. API instances scale from zero to at most two, and the clock worker to at most one; these are operational limits, not a spending cap. See [cloud operations](cloud-backend.md) for data handling and remaining class-size/history limits.
 
-## Annuity comparison
+## Financing and freight replay checks
 
-An anonymous RealGame Sustainable SCM test at simulation hour zero quoted a EUR 10,000 two-week annuity at EUR 5,012 per week (rounded display), with funding in two days. The prior Studio bullet loan funded after 24 hours and repaid once. Studio now offers an additional 8% annuity option, with 48-hour funding and weekly installments. The local replay verified the rounded quote and funding at hour 48, then payments at hours 216 and 384. Those settlement hours describe Studio's implementation. This live RealGame check reached loan acceptance, while the archived RealGame run observed delayed funding but ended before installment settlement. Opening capital, credit limits, rate adjustments and other scenarios remain separate parity questions.
-## Continued financing comparison
+A EUR 10,000 two-week annuity requested at hour 24 funded at hour 72 and settled at hours 192 and 360. A EUR 1,000 one-week deposit placed at hour 49 matured at hour 217 for EUR 1,000.77.
 
-The existing anonymous parity classroom was advanced from hour 0 to hour 47 and paused, then advanced to hour 49 and paused again. RealGame cash was EUR 989,000 at acceptance, EUR 988,833 at hour 47, and EUR 998,667 at hour 49. The observed crossing combines loan funding and operating cash charges. Studio's same-seed control run isolates a zero loan contribution through hour 47 and a EUR 10,000 contribution at hours 48 and 49. RealGame's quote gives hour 48 as the due time. The live check brackets actual funding between hours 47 and 49.
-
-At hour 49 a EUR 1,000 one-week deposit lowered RealGame cash from EUR 998,667 to EUR 997,667 while paused. Studio's matching action deducted EUR 1,000, scheduled maturity at hour 217 and computed EUR 0.77 interest. RealGame displayed a whole-euro payout quote of EUR 1,000. This is insufficient to infer actual settlement or rounding. The observed RealGame annual rate was 4%. Its form allows 1–26 whole weeks. Studio now uses that range in the student form, retains the legacy hour-based command for existing replays, and tests the one-week and 26-week boundaries. Actual RealGame deposit maturity and annuity repayments remain unverified.
-
-## Partial dispatch and freight timing
-
-At simulation hour 49, RealGame showed an open order for 160 units. Dispatching 70 reduced the open quantity to 90 and left the displayed cash balance unchanged at EUR 997,667. The selected route quoted freight payable seven days after dispatch. Actual settlement was not observed. The original Studio route paid freight immediately. Studio now accepts instructor-configured route payment terms in hours, with zero retaining the existing immediate-payment behavior. A matching test uses hour 49, a 160-unit order, a 70-unit shipment and a 168-hour freight term. It verifies unchanged dispatch cash, 90 remaining, an accrued freight payable and one settlement at hour 217. Subsequent route edits do not change the accepted obligation. This comparison does not equate the two route prices or confirm RealGame's freight accounting entries.
-
-## Settlement run and runtime limit
-
-The anonymous parity session resumed at hour 49 and stopped at hour 180. RealGame rejected a further start with “Maximum session runtime exceeded.” Clock speed was restored to 20 seconds per simulated hour, and the session was retained.
-
-1. Before the first weekly boundary, RealGame displayed EUR 997,000 cash at hour 167. At hour 171 it displayed EUR 746,871. That aggregate change includes other postings and cannot be attributed to the installment alone. The income statement reported EUR 15 in interest and financial expenses by hour 180. A separate archived loan requested at hour 24 and funded at hour 72 has scheduled principal and interest entries at hours 192 and 360, one and two weeks after the request. The timing evidence supports a request-based schedule. New Studio annuity requests use that anchor. The same hour-24 replay funds at hour 72 and pays at hours 192 and 360. The hour-zero scenario now schedules payments at 168 and 336. Previously accepted Studio contracts retain their original schedule.
-2. The deposit placed at hour 49 was due at hour 217, beyond the RealGame cap. The Studio replay settled at hour 217 for EUR 1,000.77. An earlier archived RealGame one-week deposit shows a scheduled credit of EUR 1,000, consistent with the live display. Actual credit and rounding remain unverified.
-3. The freight charge quoted for seven days after dispatch at hour 49 was also due at hour 217. Studio's configured fixture accrued EUR 275 and settled it once at hour 217. That figure uses the fixture's tariff, and RealGame's realized freight debit remains unverified.
-4. The second annuity installment could not be reached in RealGame. Studio settled both scheduled repayments and cleared the principal in the replay. The RealGame installment amount was not isolated from other cash movements, so Studio's interest formula was unchanged.
+Dispatching 70 units against an order for 160 left 90 open. With a 168-hour freight payment term, the fixture accrued EUR 275 at dispatch and paid it once at hour 217. Changing the route after dispatch preserved the accepted obligation.

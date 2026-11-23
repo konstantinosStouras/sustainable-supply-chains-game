@@ -52,6 +52,6 @@ The combined build also retains the separately developed fixes for energy-contra
 - CSV download completion was not verified: browser download-event capture timed out. The report values themselves were inspected on screen.
 - This validates local multiplayer behavior. Public backend deployment and load testing are separate from this playtest.
 
-Raw evidence is intentionally kept in the ignored local directory `private/qa-2026-11-12/`: 32 screenshots, 63 text captures, both student logs and engine audit notes. No original RealGame materials or real student records were used in this test.
+Raw evidence is intentionally kept in the ignored local directory `private/qa-2026-11-12/`: 32 screenshots, 63 text captures, both student logs and engine audit notes. The test used synthetic student records.
 
 ![Final cumulative-profit report for the three synthetic companies](screenshots/multi-agent-profit.jpg)

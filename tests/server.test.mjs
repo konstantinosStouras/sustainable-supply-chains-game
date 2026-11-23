@@ -39,7 +39,7 @@ test('HTTP roles, simultaneous submissions, shared messages and private-file iso
   const url = `http://127.0.0.1:${server.address().port}`, ut = store.issueToken(u.id).token, tt = store.issueToken(t.id).token;
   const post = (path, body, token = ut) => fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
   try {
-    assert.equal((await fetch(url + '/private/realgame-study-2026-11-12/index.html')).status, 404);
+    assert.equal((await fetch(url + '/private/research-fixture/index.html')).status, 404);
     assert.equal((await fetch(url + '/.data/simulation.sqlite')).status, 404);
     assert.equal((await fetch(url + `/api/sessions/${s.id}`)).status, 401);
     assert.equal((await post(`/api/sessions/${s.id}/command`, { key: 'student-clock', revision: 0, command: { type: 'step', hours: 1 } })).status, 403);

@@ -33,7 +33,7 @@ Every competing command previously entered a write transaction and decoded the g
 
 ## Validation
 
-All **237 automated tests passed**. The new admission tests count transaction entry before the in-memory database's serialization, so that serialization cannot hide an application-level write stampede. Tests cover 120 same-version clients, exact retries, permission loss while waiting, writer failure recovery, classroom independence, clock catch-up and paused-state fast rejection. Syntax, whitespace, browser-version checks and both builds passed. [GitHub checks](https://github.com/konstantinosStouras/realgame-sustainability-simulation/actions/runs/43448151394) and [Pages publication](https://github.com/konstantinosStouras/realgame-sustainability-simulation/actions/runs/43448151162) succeeded.
+All **237 automated tests passed**. The new admission tests count transaction entry before the in-memory database's serialization, so that serialization cannot hide an application-level write stampede. Tests cover 120 same-version clients, exact retries, permission loss while waiting, writer failure recovery, classroom independence, clock catch-up and paused-state fast rejection. Syntax, whitespace, browser-version checks and both builds passed. GitHub checks (run 43448151394) and Pages publication (run 43448151162) succeeded.
 
 ## Complete 60-day recovery run
 

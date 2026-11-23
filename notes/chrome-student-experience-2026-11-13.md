@@ -27,7 +27,7 @@ Review also caught and corrected a focus-restoration regression before release: 
 ## Validation
 
 - All **194 automated tests passed**, including 15 new pause/interaction cases. Syntax checks, whitespace checks, browser-version validation, and both static-site and Firebase Functions builds passed.
-- Fixes were published in commit `906ea23`, browser release `1d4ffbd8ac92`. [GitHub checks](https://github.com/konstantinosStouras/realgame-sustainability-simulation/actions/runs/43426322304) and [Pages deployment](https://github.com/konstantinosStouras/realgame-sustainability-simulation/actions/runs/43426321593) succeeded. Firebase Functions and Hosting deployment also succeeded. Both public hosting endpoints served the same release.
+- Fixes were published in commit `906ea23`, browser release `1d4ffbd8ac92`. GitHub checks (run 43426322304) and Pages deployment (run 43426321593) succeeded. Firebase Functions and Hosting deployment also succeeded. Both public hosting endpoints served the same release.
 - All five Chrome tabs were reloaded onto that release. Expanded report values and the finance journal remained open after the instructor advanced time; the journal's entry count updated while keyboard focus stayed on its disclosure.
 - With all five tabs connected and the fastest clock running, **one Pause click succeeded**. Every tab converged on the same paused time, 11 January at 16:00. No stale warning or misleading pending-decision notice appeared. The report retained its exact scroll offset and keyboard focus through this run.
 - A new production schedule saved successfully, released form focus, and received the next instructor clock update without a manual blur or reload.

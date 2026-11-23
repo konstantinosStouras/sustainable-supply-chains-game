@@ -1,6 +1,6 @@
 # Classroom stress test — 13 November 2026
 
-The tests use synthetic students and companies in an isolated checkout and local test databases. No real student records, private messages, credentials, or original RealGame materials are included.
+The tests use synthetic students and companies in an isolated checkout and local test databases. No real student records, private messages, credentials, or third-party teaching materials are included.
 
 ## Workloads and observed outcomes
 

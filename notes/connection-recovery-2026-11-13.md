@@ -34,7 +34,7 @@ The complete suite passed **218 tests**, including 24 new cases in the command-r
 
 Syntax, whitespace, browser asset version and both static-site and Functions build checks passed. Changes are in commits `b09d39e` and `6b65af4`; final browser release `2ab28fd34fe9`. Only browser hosting required deployment; the backend concurrency logic passed without server changes.
 
-[GitHub checks](https://github.com/konstantinosStouras/realgame-sustainability-simulation/actions/runs/43435699879) and [Pages deployment](https://github.com/konstantinosStouras/realgame-sustainability-simulation/actions/runs/43435699692) succeeded. Firebase Hosting deployment succeeded, and both public hosting endpoints returned HTTP 200 with the final release.
+GitHub checks (run 43435699879) and Pages deployment (run 43435699692) succeeded. Firebase Hosting deployment succeeded, and both public hosting endpoints returned HTTP 200 with the final release.
 
 Chrome was returned to **No throttling**, DevTools was closed, and the three synthetic student tabs were closed. The temporary classroom, its associated records and all four synthetic identities (including the setup instructor) were removed with cleanup checks passing. Private fixture credentials and individual run artifacts were not committed.
 

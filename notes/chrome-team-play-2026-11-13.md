@@ -96,7 +96,7 @@ The corrected release passed a visible Chrome retest. A 10-unit road draft initi
 
 The purchasing correction also passed a live competing-team test. Gamma opened a 4,800-cell purchase while shared stock was 34,800. Beta then bought 4,800 cells. Gamma's stale submission refreshed the same dialog to 30,000 available, preserving its entered 4,800 units and appropriate €14,925 / 12,000 kg quote for explicit review.
 
-Testing also found that the README and canonical/social metadata directed users to a legacy deployment path. Those links were corrected to the required `/realgame-sustainability-simulation/` location. A legacy-page reproduction was distinguished from the corrected-release retest; parent-domain configuration was not changed.
+Testing also found that the README and canonical/social metadata directed users to a legacy deployment path. Those links were corrected to the required `/sustainability-simulation/` location. A legacy-page reproduction was distinguished from the corrected-release retest; parent-domain configuration was not changed.
 
 Alpha also found floating-point display tails in the exact report table, including `184.32000000000002` and `2925.7999999999997` kg. The correction displays non-currency report values with at most four decimal places while preserving two-decimal currency formatting and raw CSV data. The expanded 251-test suite passed. Actual Chrome verification of the deployed release showed 184.32, 2,925.8, and 3,069.8 without binary tails; Beta's 450.905 retained useful precision. Currency retained two decimal places and module counts remained integers.
 
