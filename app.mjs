@@ -1,8 +1,8 @@
-import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=5b94b0092273';
-import { createMessageSounds } from './src/message-sounds.mjs?v=5b94b0092273';
-import { catalog, itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=5b94b0092273';
-import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=5b94b0092273';
-import { watchSession } from './src/session-updates.mjs?v=5b94b0092273';
+import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=1c9f1cfe5f8d';
+import { createMessageSounds } from './src/message-sounds.mjs?v=1c9f1cfe5f8d';
+import { catalog, itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=1c9f1cfe5f8d';
+import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=1c9f1cfe5f8d';
+import { watchSession } from './src/session-updates.mjs?v=1c9f1cfe5f8d';
 const root = document.querySelector('#app'), dialog = document.querySelector('#dialog');
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format((n || 0) / 100);
@@ -404,7 +404,7 @@ function renderWelcome() {
   }
 }
 async function getFirebase() {
-  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=5b94b0092273')).firebase;
+  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=1c9f1cfe5f8d')).firebase;
   return firebaseClient;
 }
 async function enterFirebase() {
@@ -470,7 +470,7 @@ async function testStudents() {
 }
 function testOwner() { return JSON.stringify([backend, firebaseClient?.user?.uid || user.id]); }
 async function savedTests(source) {
-  const client = (await import('./src/test-client.mjs?v=5b94b0092273')).testClient();
+  const client = (await import('./src/test-client.mjs?v=1c9f1cfe5f8d')).testClient();
   let saved;
   try { saved = await client.call('list',{owner:testOwner(),source}); } finally { client.close(); }
   modal('Saved test sessions', '<p>Saved on this device in this browser profile. Clearing site data removes these tests. Each session retains its students, decisions and results. Open a session to resume or delete it.</p>' + (saved.length ? table(['Session','Hour','Students',''],saved.map(s => {
@@ -487,7 +487,7 @@ async function startTestSetup(id) {
     // The first modal closes before its next form is opened.
     setTimeout(() => modal('Assign test students', '<p>Each student belongs to exactly one company. Choose 1–20 students per company (60 total maximum).</p>' + Array.from({length:count}, (_,i) => `<div class="form-grid">${field('company-'+i,'Company '+(i+1),template.companyNames[i] || 'Company '+(i+1),'text','maxlength="60"')}${field('students-'+i,'Test students', i === 0 ? 2 : 1,'number','min="1" max="20"')}</div>`).join(''), async f => {
       const groups = Array.from({length:count},(_,i) => ({name:f.get('company-'+i),students:value(f,'students-'+i)}));
-      const client = (await import('./src/test-client.mjs?v=5b94b0092273')).testClient();
+      const client = (await import('./src/test-client.mjs?v=1c9f1cfe5f8d')).testClient();
       try { await navigator.storage?.persist?.().catch(() => false); await client.create(template,groups,{owner:testOwner(),source:id}); await enterTest(client); } catch(e) {client.close();throw e;}
     }, 'Start test round'), 0);
   }, 'Choose students');
@@ -1092,7 +1092,7 @@ function inventoryPanel(embedded = false) {
   return panel(embedded ? '' : 'Inventory', '', `${buildSummary}${filters}<div class="inventory-table">${table(['Item', 'Amount / capacity', `Needed / ${product}`, 'Avg cost / unit', 'Ordered', 'kg CO₂e / unit'], rows, 'Select Finished or Components to show stock.')}</div><p class="form-note inventory-note">Counts reflect materials only. The forecast adds all outstanding purchases to today’s stock, assuming no stock is used before receipt. Stock above capacity costs €0.05 per excess unit per day.</p>${wasteAction}`) + timeline;
 }
 function suppliersPanel(embedded = false) {
-  return `${panel(embedded ? '' : 'Supplier marketplace', 'All orders have a landed fixed fee. Supplier stock is shared across companies.', table(['Supplier / item', 'Unit price', 'Order fee', 'Lead / payment', 'Delivery accuracy', 'Component / freight CO₂e', 'Available / lot', ''], state.catalog.suppliers.filter(s => s.enabled).map(s => [`<strong>${esc(s.name)}</strong><small>${itemName(state, s.item)}</small>`, sortCell(exactMoney(s.price), s.price), sortCell(exactMoney(s.fee), s.fee), sortCell(`${s.lead} h / ${s.term} h<small>Payment after receipt</small>`, s.lead), sortCell(`${s.reliability}% on time<small>Up to ${s.maxDelay} h extra</small>`, s.reliability), sortCell(`${precise(s.carbon)} / ${precise(s.freight)} kg per unit<small>${precise(s.carbon + s.freight)} kg total per unit</small>`, s.carbon), sortCell(`${number(s.stock)}<small>Minimum ${s.min} · lot ${s.lot}</small>`, s.stock), button('purchase', 'Order', s.id, 'small', !permitted('purchasing'))])))}`;
+  return `${panel(embedded ? '' : 'Supplier marketplace', 'All orders have a landed fixed fee. Supplier stock is shared across companies.', table(['Supplier / item', 'Unit price', 'Order fee', 'Lead / payment', 'Delivery accuracy', 'Component / freight CO₂e', 'Available / lot', ''], state.catalog.suppliers.filter(s => s.enabled).map(s => [`<strong>${esc(s.name)}</strong><small>${itemName(state, s.item)} · Origin: ${esc(sourcingOrigins[s.id] || "Unspecified")}</small>`, sortCell(exactMoney(s.price), s.price), sortCell(exactMoney(s.fee), s.fee), sortCell(`${s.lead} h / ${s.term} h<small>Payment after receipt</small>`, s.lead), sortCell(`${s.reliability}% on time<small>Up to ${s.maxDelay} h extra</small>`, s.reliability), sortCell(`${precise(s.carbon)} / ${precise(s.freight)} kg per unit<small>${precise(s.carbon + s.freight)} kg total per unit</small>`, s.carbon), sortCell(`${number(s.stock)}<small>Minimum ${s.min} · lot ${s.lot}</small>`, s.stock), button('purchase', 'Order', s.id, 'small', !permitted('purchasing'))])))}`;
 }
 function logisticsPanel(embedded = false) {
   return `${panel(embedded ? '' : 'Logistics services', 'Compare the enabled routes before dispatching a customer order.', table(['Route', 'Duration', 'Cost / shipment', 'Cost / unit', 'Delivery accuracy', 'Transport CO₂e'], state.catalog.routes.filter(r => r.enabled).map(r => [esc(r.name), sortCell(`${r.hours} h`, r.hours), sortCell(exactMoney(r.fixed), r.fixed), sortCell(exactMoney(r.unit), r.unit), sortCell(`${r.reliability}% on time<small>Up to ${r.maxDelay} h extra</small>`, r.reliability), sortCell(`${precise(r.carbonFixed)} kg / shipment<small>${precise(r.carbonUnit)} kg / unit</small>`, r.carbonFixed)]), 'No transport routes are enabled.'))}`;
@@ -1456,6 +1456,33 @@ let disruptionTab = 'supply';
 const disruptionTabs = { supply: 'Supply and logistics', carbon: 'Carbon and regulation', tariff: 'Import tariffs' };
 
 
+// Origins describe the manufacturing plant for each offer in the US-import exercise.
+const sourcingOrigins = {
+  'cell-circular': 'China', 'cell-express': 'Malaysia',
+  'frame-circular': 'Canada', 'frame-express': 'United Kingdom',
+  'controller-circular': 'South Africa', 'controller-express': 'United States'
+};
+// Percentages are selected additional duties, in country-of-origin order below.
+const tariffHistory = {
+  baseline: { label: 'Pre-shock baseline', rates: [0, 0, 0, 0, 0, 0] },
+  feb04: { label: '4 February 2025', rates: [10, 0, 0, 0, 0, 0] },
+  mar04: { label: '4 March 2025', rates: [20, 0, 0, 0, 0, 0] },
+  mar12: { label: '12 March 2025', rates: [20, 0, 25, 25, 0, 0] },
+  apr05: { label: '5 April 2025', rates: [30, 10, 25, 25, 10, 0] },
+  apr09: { label: '9 April 2025', rates: [104, 24, 25, 25, 30, 0] },
+  apr10: { label: '10 April 2025', rates: [145, 10, 25, 25, 10, 0] },
+  may14: { label: '14 May 2025', rates: [30, 10, 25, 25, 10, 0] },
+  jun04: { label: '4 June 2025', rates: [30, 10, 50, 25, 10, 0] },
+  aug07: { label: '7 August 2025', rates: [30, 19, 50, 25, 30, 0] }
+};
+const tariffOrigins = ['China', 'Malaysia', 'Canada', 'United Kingdom', 'South Africa', 'United States'];
+let previewTariff = 'apr10';
+function tariffQuote(stage, row, opening) {
+  const index = tariffOrigins.indexOf(sourcingOrigins[row.id]);
+  if (index < 0) return null;
+  const rate = tariffHistory[stage].rates[index];
+  return { rate, price: Math.round(opening.price * (100 + rate) / 100) };
+}
 function disruptionChanges(preset) {
   const openingCatalog = catalog();
   if (preset === 'carbon-on' || preset === 'carbon-off') {
@@ -1468,12 +1495,12 @@ function disruptionChanges(preset) {
   const changes = [];
   for (const row of state.catalog[collection]) {
     const opening = openingCatalog[collection].find(x => x.id === row.id);
-    if (!opening || (!routes && !row.enabled)) continue;
+    if (!opening || (!routes && !tariff && !row.enabled)) continue;
     let patch;
     if (tariff) {
-      if (!row.id.endsWith('-circular')) continue;
-      const rate = Number(preset.slice(7));
-      patch = { price: Math.round(opening.price * (1 + rate / 100)) };
+      const quote = tariffQuote(preset.slice(7), row, opening);
+      if (!quote) continue;
+      patch = { price: quote.price };
     } else if (routes) {
       patch = preset === 'routes-shock' ? { enabled: true, reliability: 50 } : { enabled: opening.enabled, reliability: opening.reliability };
     } else {
@@ -1500,11 +1527,19 @@ function disruptionPanel() {
       preset('carbon-on', 'Enable carbon-conscious demand') + preset('carbon-off', 'Turn preference off');
   } else {
     const openingCatalog = catalog();
-    const rows = state.catalog.suppliers.filter(x => x.enabled && x.id.endsWith('-circular'));
-    body = '<h3>Tariff-inclusive component prices</h3><p>Circular Works represents the covered import origin. Atlas represents an exempt alternative. Each preset passes the duty through to the quoted unit price, relative to the standard opening price. Ordering fees are separate.</p>' +
-      table(['Covered component', 'Standard price', 'Current quote'], rows.map(x => [itemName(state, x.item), exactMoney(openingCatalog.suppliers.find(y => y.id === x.id).price), exactMoney(x.price)])) +
-      [0, 10, 25].map(rate => preset('tariff-' + rate, rate ? 'Apply ' + rate + '% tariff' : 'Restore standard prices')).join('') +
-      '<p class="form-note">Compare sourcing, landed costs, inventory, margins and service. The rates are teaching scenarios inspired by the US Section 301 duties on selected Chinese imports.</p>';
+    const stage = tariffHistory[previewTariff];
+    const options = Object.entries(tariffHistory).map(([id, entry]) => button('tariff-preview', entry.label, id, id === previewTariff ? 'primary small' : 'small')).join('');
+    const rows = state.catalog.suppliers.filter(x => Object.hasOwn(sourcingOrigins, x.id)).map(row => {
+      const opening = openingCatalog.suppliers.find(x => x.id === row.id);
+      const quote = tariffQuote(previewTariff, row, opening);
+      return [itemName(state, row.item), sourcingOrigins[row.id], exactMoney(opening.price), quote.rate + '%', exactMoney(quote.price), exactMoney(row.price)];
+    });
+    body = '<h3>US import tariffs in 2025</h3><p>Teams assemble panels in the United States. Select a historical date to preview the duties on each manufacturing origin, then apply the quotes to future orders.</p>' +
+      '<div class="toolbar" aria-label="Historical policy dates">' + options + '</div><h3>' + stage.label + '</h3>' +
+      table(['Component', 'Manufacturing origin', 'Base unit value', 'Modelled duty', 'Preview quote', 'Live quote'], rows) +
+      preset('tariff-' + previewTariff, 'Apply ' + stage.label + ' quotes') +
+      '<p class="form-note">The April peak on covered Chinese cells combines the 20% China duty and 125% reciprocal duty. Frames are covered aluminium extrusions. Prices assume full pass-through at order acceptance. Other duties, including solar trade remedies, are outside this replay. <a href="notes/model.md#us-import-tariffs-in-2025" target="_blank" rel="noopener">Coverage and official sources ↗</a></p>';
+
   }
   return panel('External Disruptions', 'Pause the clock to change conditions. Check each resulting value before resuming play.', '<nav class="toolbar" aria-label="Disruption scenarios">' + tabs + '</nav>' + body);
 }
@@ -1612,7 +1647,7 @@ function updatePurchaseContext(id, form) {
   quantity.setCustomValidity(supplier?.enabled ? '' : 'This supplier is currently unavailable.');
   if (!supplier) { context.textContent = 'This supplier is no longer available.'; quote.textContent = ''; return; }
   quantity.min = String(supplier.min); quantity.max = String(supplier.stock); quantity.step = String(supplier.lot);
-  context.textContent = `${supplier.name} · ${exactMoney(supplier.price)} per unit + ${exactMoney(supplier.fee)} order fee. Supplier stock available: ${supplier.stock}. Estimated receipt ${simDate(state.hour + supplier.lead)}; payment ${supplier.term} h after actual receipt. Minimum ${supplier.min}; lots of ${supplier.lot}.${supplier.enabled ? '' : ' This supplier is currently disabled.'}`;
+  context.textContent = `${supplier.name} · ${sourcingOrigins[supplier.id] || "Unspecified origin"} · ${exactMoney(supplier.price)} per unit + ${exactMoney(supplier.fee)} order fee. Supplier stock available: ${supplier.stock}. Estimated receipt ${simDate(state.hour + supplier.lead)}; payment ${supplier.term} h after actual receipt. Minimum ${supplier.min}; lots of ${supplier.lot}.${supplier.enabled ? '' : ' This supplier is currently disabled.'}`;
   const qty = Number(quantity.value);
   quote.textContent = `${exactMoney(qty * supplier.price + supplier.fee)} committed payable · ${number(qty * (supplier.carbon + supplier.freight))} kg CO₂e. Cash is paid after receipt, not now.`;
 }
@@ -1645,6 +1680,7 @@ document.addEventListener('keydown', event => {
 });
 
 async function action(name, id) {
+  if (name === 'tariff-preview' && Object.hasOwn(tariffHistory, id)) { previewTariff = id; render(); return; }
   if (name === 'disruption-tab' && Object.hasOwn(disruptionTabs, id)) { disruptionTab = id; render(); return; }
   if (name === 'disruption-preset') { await applyDisruption(id); return; }
   if (name === 'pane-wide' || name === 'pane-reset') {
@@ -1764,7 +1800,7 @@ async function action(name, id) {
     return;
   }
   if (name === 'nav') { page = id; if (id === 'admin' && preview) { preview = undefined; await load(); } else render(); return; }
-  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=5b94b0092273')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
+  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=1c9f1cfe5f8d')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
   if (name === 'switch-solo') { solo.switchRole(isTeacher() ? 'student' : 'instructor'); preview = undefined; page = isTeacher() ? 'overview' : 'admin'; await load(); return; }
   if (name === 'demo') { await signIn(await api('/demo', { username: id })); return; }
   if (name === 'logout') { if (!solo && token) { try { await api('/logout', {}); } catch {} } if (firebaseClient?.user) await firebaseClient.logout(); solo = null; state = null; actor = null; user = null; token = ''; sessionId = null; sessionStorage.removeItem('studio-token'); selectSession(null); renderWelcome(); return; }
@@ -1942,7 +1978,7 @@ document.addEventListener('change', async event => {
 async function startWorkspace() {
   if (location.hash?.startsWith('#test=')) {
     const testLink = new URLSearchParams(location.hash.slice(1));
-    try { const client = (await import('./src/test-client.mjs?v=5b94b0092273')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
+    try { const client = (await import('./src/test-client.mjs?v=1c9f1cfe5f8d')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
     catch(e) { root.innerHTML = '<main class="welcome"><h1>Test round unavailable</h1><p>' + esc(e.message) + '</p><div class="toolbar">' + (e.status === 403 ? button('retry-start', 'Try again', '', 'primary') : '') + button('test-leave','Return to classroom') + '</div></main>'; }
     return;
   }

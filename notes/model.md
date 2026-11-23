@@ -166,3 +166,30 @@ The potential-automation indicator flags a **rapid pattern for review** when one
 Coordinate procurement, inventory, production, deliveries and sales around a shared demand plan. Plan purchases from projected orders and lead times; monitor safety stock; match shifts and capacity to materials; prioritize customer deadlines; and make market offers that operations can fulfil. Review competitor results, cash, profit and funding needs together, and communicate changes before advancing time.
 
 The in-app Help & guide presents these responsibilities, a four-step decision cycle and expandable explanations of each decision area.
+
+## US import tariffs in 2025
+
+The importer assembles panels in the United States. The six existing supplier offers represent six manufacturing plants. Cells come from China or Malaysia, frames from Canada or the United Kingdom, and junction boxes from South Africa or the United States. These origins are scenario assignments. They do not identify real companies or establish the origin of actual goods.
+
+The dated quotes replay selected **additional** US duties enacted in 2025. Assume ordinary commercial entries, no in-transit relief, covered unassembled photovoltaic cells (8541.42), covered electrical junction boxes and frames made entirely from covered aluminium extrusions. Canadian and UK opening frames qualify for their pre-March exemption or quota. Assume qualifying non-Russian smelt and cast. A US-made box purchased domestically has no US import duty. For frames, apply Section 232 to the covered aluminium value without a second reciprocal charge on that same value.
+
+| US policy date | China cells | Malaysia cells | Canada frames | UK frames | South Africa boxes | US boxes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Opening comparison | 0% | 0% | 0% | 0% | 0% | 0% |
+| 4 February | 10% | 0% | 0% | 0% | 0% | 0% |
+| 4 March | 20% | 0% | 0% | 0% | 0% | 0% |
+| 12 March | 20% | 0% | 25% | 25% | 0% | 0% |
+| 5 April | 30% | 10% | 25% | 25% | 10% | 0% |
+| 9 April | 104% | 24% | 25% | 25% | 30% | 0% |
+| 10 April | 145% | 10% | 25% | 25% | 10% | 0% |
+| 14 May | 30% | 10% | 25% | 25% | 10% | 0% |
+| 4 June | 30% | 10% | 50% | 25% | 10% | 0% |
+| 7 August | 30% | 19% | 50% | 25% | 30% | 0% |
+
+The opening comparison removes the measures in this exercise. The China column adds the synthetic-opioid and reciprocal duties, calculated separately on the same customs value. On 9 April the two layers were 20% and 84%, and on 10 April they were 20% and 125%. The Malaysia and South Africa columns reflect covered reciprocal entries. The August column uses the final July order effective 7 August.
+
+Previewing a date changes no quotes. Applying it sets each plant's unit quote to opening unit value times one plus the applicable rate, rounded to euro cents. Existing commitments keep their agreed price. The class calendar can compress months of policy into hours of play. Actual US duties attach at customs entry. The classroom fixes the duty-inclusive quote at purchase and assumes full pass-through. Baseline MFN duties, Section 301, photovoltaic safeguards, producer-specific antidumping and countervailing duties, currency movements and customs brokerage are outside the price calculation.
+
+The February and March China measures are documented in the [CBP implementation notice](https://www.federalregister.gov/d/2025-02293) and [March increase](https://www.federalregister.gov/d/2025-03677). The aluminium treatment follows the [March change](https://www.whitehouse.gov/presidential-actions/2025/02/adjusting-imports-of-aluminum-into-the-united-states/) and [June change and UK exception](https://www.whitehouse.gov/presidential-actions/2025/06/adjusting-imports-of-aluminum-and-steel-into-the-united-states/).
+
+The reciprocal tariff sequence follows [Executive Order 14257](https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/), its [country annex](https://www.whitehouse.gov/wp-content/uploads/2025/04/Annex-I.pdf), the [8 April order](https://www.whitehouse.gov/wp-content/uploads/2025/04/eo-14259.pdf), the [9 April order](https://www.whitehouse.gov/presidential-actions/2025/04/modifying-reciprocal-tariff-rates-to-reflect-trading-partner-retaliation-and-alignment/), the [product exceptions](https://www.whitehouse.gov/presidential-actions/2025/04/clarification-of-exceptions-under-executive-order-14257-of-april-2-2025-as-amended/), the [May reduction](https://www.whitehouse.gov/presidential-actions/2025/05/modifying-reciprocal-tariff-rates-to-reflect-discussions-with-the-peoples-republic-of-china/) and the [final July country schedule](https://www.whitehouse.gov/wp-content/uploads/2025/07/eo-14326.pdf).

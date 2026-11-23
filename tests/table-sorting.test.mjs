@@ -103,3 +103,29 @@ test('mobile record labels stay with their values and actions after sorting',()=
  assert.match(rows[1].html,/data-id="alpha"/);
  assert.equal(h.run('table(["Name"],[])').includes('responsive-table'),false);
 });
+
+test('historical tariff quotes distinguish component origins and never compound between dates', () => {
+ const h = harness();
+ const session = engine.createSession();
+ const teacher = {id: 'teacher', role: 'instructor'};
+ const student = {id: 'student', role: 'student', companyId: session.companies[0].id};
+ const stages = [
+  ['apr09', [632, 476, 2250, 2790, 3120, 2976]],
+  ['apr10', [760, 422, 2250, 2790, 2640, 2976]],
+  ['may14', [403, 422, 2250, 2790, 2640, 2976]],
+  ['jun04', [403, 422, 2700, 2790, 2640, 2976]],
+  ['aug07', [403, 457, 2700, 2790, 3120, 2976]],
+  ['baseline', [310, 384, 1800, 2232, 2400, 2976]]
+ ];
+ engine.applyCommand(session, student, {type:'purchase', supplierId:'cell-circular', qty:240});
+ const before = session.companies[0].purchases[0].cost;
+ for (const [stage, expected] of stages) {
+  h.context.session = session;
+  h.run('state=session');
+  const changes = h.run("disruptionChanges('tariff-" + stage + "')");
+  for (const change of changes) engine.applyCommand(session, teacher, change);
+  assert.deepEqual(session.catalog.suppliers.map(row => row.price), expected, stage);
+  assert.equal(h.run("disruptionChanges('tariff-" + stage + "').length"), 0);
+  assert.equal(session.companies[0].purchases[0].cost, before);
+ }
+});
