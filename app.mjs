@@ -1,8 +1,9 @@
-import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=78dc8abdd5d4';
-import { createMessageSounds } from './src/message-sounds.mjs?v=78dc8abdd5d4';
-import { products, catalog, itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=78dc8abdd5d4';
-import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=78dc8abdd5d4';
-import { watchSession } from './src/session-updates.mjs?v=78dc8abdd5d4';
+import { supplierEvidence } from './src/supply-performance.mjs?v=f10964fe02db';
+import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=f10964fe02db';
+import { createMessageSounds } from './src/message-sounds.mjs?v=f10964fe02db';
+import { products, catalog, itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=f10964fe02db';
+import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=f10964fe02db';
+import { watchSession } from './src/session-updates.mjs?v=f10964fe02db';
 const root = document.querySelector('#app'), dialog = document.querySelector('#dialog');
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format((n || 0) / 100);
@@ -405,7 +406,7 @@ function renderWelcome() {
   }
 }
 async function getFirebase() {
-  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=78dc8abdd5d4')).firebase;
+  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=f10964fe02db')).firebase;
   return firebaseClient;
 }
 async function enterFirebase() {
@@ -471,7 +472,7 @@ async function testStudents() {
 }
 function testOwner() { return JSON.stringify([backend, firebaseClient?.user?.uid || user.id]); }
 async function savedTests(source) {
-  const client = (await import('./src/test-client.mjs?v=78dc8abdd5d4')).testClient();
+  const client = (await import('./src/test-client.mjs?v=f10964fe02db')).testClient();
   let saved;
   try { saved = await client.call('list',{owner:testOwner(),source}); } finally { client.close(); }
   modal('Saved test sessions', '<p>Saved on this device in this browser profile. Clearing site data removes these tests. Each session retains its students, decisions and results. Open a session to resume or delete it.</p>' + (saved.length ? table(['Session','Hour','Students',''],saved.map(s => {
@@ -488,7 +489,7 @@ async function startTestSetup(id) {
     // The first modal closes before its next form is opened.
     setTimeout(() => modal('Assign test students', '<p>Each student belongs to exactly one company. Choose 1–20 students per company (60 total maximum).</p>' + Array.from({length:count}, (_,i) => `<div class="form-grid">${field('company-'+i,'Company '+(i+1),template.companyNames[i] || 'Company '+(i+1),'text','maxlength="60"')}${field('students-'+i,'Test students', i === 0 ? 2 : 1,'number','min="1" max="20"')}</div>`).join(''), async f => {
       const groups = Array.from({length:count},(_,i) => ({name:f.get('company-'+i),students:value(f,'students-'+i)}));
-      const client = (await import('./src/test-client.mjs?v=78dc8abdd5d4')).testClient();
+      const client = (await import('./src/test-client.mjs?v=f10964fe02db')).testClient();
       try { await navigator.storage?.persist?.().catch(() => false); await client.create(template,groups,{owner:testOwner(),source:id}); await enterTest(client); } catch(e) {client.close();throw e;}
     }, 'Start test round'), 0);
   }, 'Choose students');
@@ -1093,7 +1094,7 @@ function inventoryPanel(embedded = false) {
   return panel(embedded ? '' : 'Inventory', '', `${buildSummary}${filters}<div class="inventory-table">${table(['Item', 'Amount / capacity', `Needed / ${product}`, 'Avg cost / unit', 'Ordered', 'kg CO₂e / unit'], rows, 'Select Finished or Components to show stock.')}</div><p class="form-note inventory-note">Counts reflect materials only. The forecast adds all outstanding purchases to today’s stock, assuming no stock is used before receipt. Stock above capacity costs €0.05 per excess unit per day.</p>${wasteAction}`) + timeline;
 }
 function suppliersPanel(embedded = false) {
-  return `${panel(embedded ? '' : 'Supplier marketplace', 'All orders have a landed fixed fee. Supplier stock is shared across companies.', table(['Supplier / item', 'Unit price', 'Order fee', 'Lead / payment', 'Delivery accuracy', 'Component / freight CO₂e', 'Available / lot', ''], state.catalog.suppliers.filter(s => s.enabled).map(s => [`<strong>${esc(s.name)}</strong><small>${itemName(state, s.item)} · Origin: ${esc(sourcingOrigins[s.id] || "Unspecified")}</small>`, sortCell(exactMoney(s.price), s.price), sortCell(exactMoney(s.fee), s.fee), sortCell(`${s.lead} h / ${s.term} h<small>Payment after receipt</small>`, s.lead), sortCell(`${s.reliability}% on time<small>Up to ${s.maxDelay} h extra</small>`, s.reliability), sortCell(`${precise(s.carbon)} / ${precise(s.freight)} kg per unit<small>${precise(s.carbon + s.freight)} kg total per unit</small>`, s.carbon), sortCell(`${number(s.stock)}<small>Minimum ${s.min} · lot ${s.lot}</small>`, s.stock), button('purchase', 'Order', s.id, 'small', !permitted('purchasing'))])))}`;
+  return `${panel(embedded ? '' : 'Supplier marketplace', 'All orders have a landed fixed fee. Supplier stock is shared across companies.', table(['Supplier / item', 'Unit price', 'Order fee', 'Lead / payment', 'Delivery accuracy', 'Component / freight CO₂e', 'Available / lot', 'Simulated ESG follow-up', ''], state.catalog.suppliers.filter(s => s.enabled).map(s => [`<strong>${esc(s.name)}</strong><small>${itemName(state, s.item)} · Origin: ${esc(sourcingOrigins[s.id] || "Unspecified")}</small>`, sortCell(exactMoney(s.price), s.price), sortCell(exactMoney(s.fee), s.fee), sortCell(`${s.lead} h / ${s.term} h<small>Payment after receipt</small>`, s.lead), sortCell(`${s.reliability}% on time<small>Up to ${s.maxDelay} h extra</small>`, s.reliability), sortCell(`${precise(s.carbon)} / ${precise(s.freight)} kg per unit<small>${precise(s.carbon + s.freight)} kg total per unit</small>`, s.carbon), sortCell(`${number(s.stock)}<small>Minimum ${s.min} · lot ${s.lot}</small>`, s.stock), esc(supplierEvidence(s)[3]), button('purchase', 'Order', s.id, 'small', !permitted('purchasing'))])))}`;
 }
 function logisticsPanel(embedded = false) {
   return `${panel(embedded ? '' : 'Logistics services', 'Compare the enabled routes before dispatching a customer order.', table(['Route', 'Duration', 'Cost / shipment', 'Cost / unit', 'Delivery accuracy', 'Transport CO₂e'], state.catalog.routes.filter(r => r.enabled).map(r => [esc(r.name), sortCell(`${r.hours} h`, r.hours), sortCell(exactMoney(r.fixed), r.fixed), sortCell(exactMoney(r.unit), r.unit), sortCell(`${r.reliability}% on time<small>Up to ${r.maxDelay} h extra</small>`, r.reliability), sortCell(`${precise(r.carbonFixed)} kg / shipment<small>${precise(r.carbonUnit)} kg / unit</small>`, r.carbonFixed)]), 'No transport routes are enabled.'))}`;
@@ -1638,10 +1639,16 @@ function updateDispatchContext(id, form, refreshRoutes = false) {
 function openPurchase(id) {
   const supplier = state.catalog.suppliers.find(s => s.id === id);
   if (!supplier) return;
-  modal(`Order ${itemName(state, supplier.item)}`, `<p id="purchase-context" class="form-note"></p>${field('qty', 'Quantity', supplier.min, 'number', `min="${supplier.min}" max="${supplier.stock}" step="${supplier.lot}"`)}<div id="purchase-quote" class="advice"></div>`, f => command({ type: 'purchase', supplierId: id, qty: value(f, 'qty') }), 'Place purchase');
+  modal(`Order ${itemName(state, supplier.item)}`, `${supplierDecisionEvidence(supplier)}<p id="purchase-context" class="form-note"></p>${field('qty', 'Quantity', supplier.min, 'number', `min="${supplier.min}" max="${supplier.stock}" step="${supplier.lot}"`)}<div id="purchase-quote" class="advice"></div>`, f => command({ type: 'purchase', supplierId: id, qty: value(f, 'qty') }), 'Place purchase');
   const form = dialog.querySelector('form');
   form.refreshContext = () => updatePurchaseContext(id, form);
   form.addEventListener('input', form.refreshContext); form.refreshContext();
+}
+function supplierDecisionEvidence(supplier) {
+  const [environment, social, governance, action] = supplierEvidence(supplier);
+  const due = company().purchases.filter(p => p.supplier === supplier.name && p.item === supplier.item && p.expectedAt <= state.hour);
+  const onTime = due.filter(p => p.receivedAt != null && p.receivedAt <= p.expectedAt).length;
+  return '<p class="form-note">Inbound orders received by their promised time: ' + onTime + ' of ' + due.length + ' due. Quoted lead: ' + supplier.lead + ' hours, plus up to ' + supplier.maxDelay + ' hours of delay. Late components can reduce customer on-time arrivals and units fulfilled. Landed cost affects profit as stock is sold. Component and inbound emissions contribute to total emissions and emissions per euro of sales.</p><p class="form-note"><strong>Simulated supplier evidence</strong> · Environment: ' + esc(environment) + ' · Social: ' + esc(social) + ' · Governance: ' + esc(governance) + '. Follow-up: ' + esc(action) + '.</p>';
 }
 function updatePurchaseContext(id, form) {
   const supplier = state.catalog.suppliers.find(s => s.id === id), quantity = form.querySelector('[name=qty]'), context = form.querySelector('#purchase-context'), quote = form.querySelector('#purchase-quote');
@@ -1801,7 +1808,7 @@ async function action(name, id) {
     return;
   }
   if (name === 'nav') { page = id; if (id === 'admin' && preview) { preview = undefined; await load(); } else render(); return; }
-  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=78dc8abdd5d4')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
+  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=f10964fe02db')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
   if (name === 'switch-solo') { solo.switchRole(isTeacher() ? 'student' : 'instructor'); preview = undefined; page = isTeacher() ? 'overview' : 'admin'; await load(); return; }
   if (name === 'demo') { await signIn(await api('/demo', { username: id })); return; }
   if (name === 'logout') { if (!solo && token) { try { await api('/logout', {}); } catch {} } if (firebaseClient?.user) await firebaseClient.logout(); solo = null; state = null; actor = null; user = null; token = ''; sessionId = null; sessionStorage.removeItem('studio-token'); selectSession(null); renderWelcome(); return; }
@@ -1980,7 +1987,7 @@ document.addEventListener('change', async event => {
 async function startWorkspace() {
   if (location.hash?.startsWith('#test=')) {
     const testLink = new URLSearchParams(location.hash.slice(1));
-    try { const client = (await import('./src/test-client.mjs?v=78dc8abdd5d4')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
+    try { const client = (await import('./src/test-client.mjs?v=f10964fe02db')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
     catch(e) { root.innerHTML = '<main class="welcome"><h1>Test round unavailable</h1><p>' + esc(e.message) + '</p><div class="toolbar">' + (e.status === 403 ? button('retry-start', 'Try again', '', 'primary') : '') + button('test-leave','Return to classroom') + '</div></main>'; }
     return;
   }
