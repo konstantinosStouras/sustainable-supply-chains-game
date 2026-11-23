@@ -1,8 +1,8 @@
-import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=6d0a76bc7770';
-import { createMessageSounds } from './src/message-sounds.mjs?v=6d0a76bc7770';
-import { itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=6d0a76bc7770';
-import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=6d0a76bc7770';
-import { watchSession } from './src/session-updates.mjs?v=6d0a76bc7770';
+import { operationalReports, buildOperationalReport, businessUpdates } from './src/operational-reports.mjs?v=5b94b0092273';
+import { createMessageSounds } from './src/message-sounds.mjs?v=5b94b0092273';
+import { catalog, itemName, productionRecipe, inventoryStatementValues, INVESTMENTS, FEATURES } from './src/engine.mjs?v=5b94b0092273';
+import { firebaseConfig, classroomBackend } from './firebase-config.mjs?v=5b94b0092273';
+import { watchSession } from './src/session-updates.mjs?v=5b94b0092273';
 const root = document.querySelector('#app'), dialog = document.querySelector('#dialog');
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format((n || 0) / 100);
@@ -404,7 +404,7 @@ function renderWelcome() {
   }
 }
 async function getFirebase() {
-  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=6d0a76bc7770')).firebase;
+  if (!firebaseClient) firebaseClient = (await import('./src/firebase-client.mjs?v=5b94b0092273')).firebase;
   return firebaseClient;
 }
 async function enterFirebase() {
@@ -470,7 +470,7 @@ async function testStudents() {
 }
 function testOwner() { return JSON.stringify([backend, firebaseClient?.user?.uid || user.id]); }
 async function savedTests(source) {
-  const client = (await import('./src/test-client.mjs?v=6d0a76bc7770')).testClient();
+  const client = (await import('./src/test-client.mjs?v=5b94b0092273')).testClient();
   let saved;
   try { saved = await client.call('list',{owner:testOwner(),source}); } finally { client.close(); }
   modal('Saved test sessions', '<p>Saved on this device in this browser profile. Clearing site data removes these tests. Each session retains its students, decisions and results. Open a session to resume or delete it.</p>' + (saved.length ? table(['Session','Hour','Students',''],saved.map(s => {
@@ -487,7 +487,7 @@ async function startTestSetup(id) {
     // The first modal closes before its next form is opened.
     setTimeout(() => modal('Assign test students', '<p>Each student belongs to exactly one company. Choose 1–20 students per company (60 total maximum).</p>' + Array.from({length:count}, (_,i) => `<div class="form-grid">${field('company-'+i,'Company '+(i+1),template.companyNames[i] || 'Company '+(i+1),'text','maxlength="60"')}${field('students-'+i,'Test students', i === 0 ? 2 : 1,'number','min="1" max="20"')}</div>`).join(''), async f => {
       const groups = Array.from({length:count},(_,i) => ({name:f.get('company-'+i),students:value(f,'students-'+i)}));
-      const client = (await import('./src/test-client.mjs?v=6d0a76bc7770')).testClient();
+      const client = (await import('./src/test-client.mjs?v=5b94b0092273')).testClient();
       try { await navigator.storage?.persist?.().catch(() => false); await client.create(template,groups,{owner:testOwner(),source:id}); await enterTest(client); } catch(e) {client.close();throw e;}
     }, 'Start test round'), 0);
   }, 'Choose students');
@@ -1452,9 +1452,74 @@ function adminClock() {
   <details class="clock-step-options" data-view-key="clock-step-options"><summary>Manual steps</summary><div class="clock-controls">${button('step', '+ 1 hour', '1', 'small', state.status !== 'paused')}${button('step', '+ 1 day', '24', 'small', state.status !== 'paused')}${button('step', 'Custom step', 'custom', 'small', state.status !== 'paused')}</div><p class="form-note">Pause the clock before stepping forward.</p></details>
   <div class="clock-footer">${button('settings', 'Session settings', '', 'small')}<small>No time is skipped during server downtime.</small></div>`;
 }
+let disruptionTab = 'supply';
+const disruptionTabs = { supply: 'Supply and logistics', carbon: 'Carbon and regulation', tariff: 'Import tariffs' };
+
+
+function disruptionChanges(preset) {
+  const openingCatalog = catalog();
+  if (preset === 'carbon-on' || preset === 'carbon-off') {
+    const carbonDemand = preset === 'carbon-on';
+    return state.effects.carbonDemand === carbonDemand ? [] : [{ type: 'configure', carbonDemand }];
+  }
+  const routes = preset.startsWith('routes');
+  const tariff = preset.startsWith('tariff');
+  const collection = routes ? 'routes' : 'suppliers';
+  const changes = [];
+  for (const row of state.catalog[collection]) {
+    const opening = openingCatalog[collection].find(x => x.id === row.id);
+    if (!opening || (!routes && !row.enabled)) continue;
+    let patch;
+    if (tariff) {
+      if (!row.id.endsWith('-circular')) continue;
+      const rate = Number(preset.slice(7));
+      patch = { price: Math.round(opening.price * (1 + rate / 100)) };
+    } else if (routes) {
+      patch = preset === 'routes-shock' ? { enabled: true, reliability: 50 } : { enabled: opening.enabled, reliability: opening.reliability };
+    } else {
+      patch = { reliability: preset === 'suppliers-shock' ? 70 : opening.reliability };
+    }
+    if (Object.entries(patch).some(([key, value]) => row[key] !== value)) changes.push({ type: 'catalog', collection, id: row.id, patch });
+  }
+  return changes;
+}
+function disruptionPanel() {
+  const tabs = Object.entries(disruptionTabs).map(([key, label]) => button('disruption-tab', label, key, key === disruptionTab ? 'primary' : '')).join('');
+  const preset = (key, label) => button('disruption-preset', label, key, 'small', state.status !== 'paused' || !disruptionChanges(key).length);
+  let body;
+  if (disruptionTab === 'supply') {
+    const suppliers = state.catalog.suppliers.filter(x => x.enabled);
+    body = '<h3>Inbound supply</h3><p>Set the probability of an on-time arrival for new component orders.</p>' +
+      table(['Supplier', 'Component', 'On time'], suppliers.map(x => [esc(x.name), itemName(state, x.item), x.reliability + '%'])) +
+      preset('suppliers-shock', 'Set active suppliers to 70%') + preset('suppliers-normal', 'Restore standard supplier accuracy') +
+      '<h3>Outbound logistics</h3>' + table(['Provider', 'Enabled', 'On time'], state.catalog.routes.map(x => [esc(x.name), x.enabled ? 'Yes' : 'No', x.reliability + '%'])) +
+      preset('routes-shock', 'Enable all routes at 50%') + preset('routes-normal', 'Restore standard routes');
+  } else if (disruptionTab === 'carbon') {
+    body = '<h3>Carbon-conscious procurement</h3><p>Customers give lower-footprint panels a demand advantage at the next allocation. Carbon is measured throughout play. For a compliance exercise, announce a footprint ceiling and assess it from inventory and reports. Compliance is assessed by the instructor.</p>' +
+      table(['Demand preference', 'Market weights'], [[state.effects.carbonDemand ? 'On' : 'Off', state.catalog.markets.filter(x => x.enabled).map(x => esc(x.name) + ' · ' + x.greenWeight).join('<br>')]]) +
+      preset('carbon-on', 'Enable carbon-conscious demand') + preset('carbon-off', 'Turn preference off');
+  } else {
+    const openingCatalog = catalog();
+    const rows = state.catalog.suppliers.filter(x => x.enabled && x.id.endsWith('-circular'));
+    body = '<h3>Tariff-inclusive component prices</h3><p>Circular Works represents the covered import origin. Atlas represents an exempt alternative. Each preset passes the duty through to the quoted unit price, relative to the standard opening price. Ordering fees are separate.</p>' +
+      table(['Covered component', 'Standard price', 'Current quote'], rows.map(x => [itemName(state, x.item), exactMoney(openingCatalog.suppliers.find(y => y.id === x.id).price), exactMoney(x.price)])) +
+      [0, 10, 25].map(rate => preset('tariff-' + rate, rate ? 'Apply ' + rate + '% tariff' : 'Restore standard prices')).join('') +
+      '<p class="form-note">Compare sourcing, landed costs, inventory, margins and service. The rates are teaching scenarios inspired by the US Section 301 duties on selected Chinese imports.</p>';
+  }
+  return panel('External Disruptions', 'Pause the clock to change conditions. Check each resulting value before resuming play.', '<nav class="toolbar" aria-label="Disruption scenarios">' + tabs + '</nav>' + body);
+}
+async function applyDisruption(preset) {
+  if (!isTeacher() || state.status !== 'paused') throw new Error('Pause the classroom clock before applying a disruption.');
+  for (const change of disruptionChanges(preset)) {
+    if (state.status !== 'paused') throw new Error('The clock resumed. Pause and reapply to finish the remaining changes.');
+    await command(change);
+  }
+  render();
+}
+
 function adminPage() {
   if (!isTeacher()) return '';
-  return `<div class="grid2">${panel('The shared clock', '', adminClock())}${panel('Classroom access', 'Every student belongs to one company in this session.', `<div class="toolbar">${button('roster', 'Companies & join codes', '', 'primary', !!solo)}${button('create', 'New session', '', '', !!solo || !!testRoom)}${button('sessions', 'Switch session', '', 'small', !!solo)}</div><p class="form-note">Company join codes grant student membership only. Instructor previews are read-only. Team messages are visible only to members of that company.</p>`)}</div>${panel('Teaching capabilities', 'Visibility controls navigation. Permission controls new decisions. Model effects are separate.', `<div class="toggle-row"><span>Feature</span><span>Visibility &nbsp; / &nbsp; Permission</span></div>${FEATURES.map(f => `<form class="toggle-row" data-feature="${f}"><span>${esc(f.charAt(0).toUpperCase() + f.slice(1))}</span><div class="toolbar">${check('visible', 'Show', state.features[f].visible)}${check('allowed', 'Allow decisions', state.features[f].allowed)}${button('submit', 'Apply', '', 'small')}</div><div class="error" role="alert"></div></form>`).join('')}<form id="effects-form" class="toggle-row"><span>Model effect</span><div class="toolbar">${check('carbonDemand', 'Customer preference for lower carbon', state.effects.carbonDemand)}${button('submit', 'Apply', '', 'small')}</div><div class="error" role="alert"></div></form>`)}${panel('Scenario catalogues', 'Change future supply, transport, demand, and energy conditions. Accepted contracts keep their terms.', `<div class="toolbar">${['suppliers', 'routes', 'markets', 'energy'].map(k => button('catalog-list', k.charAt(0).toUpperCase() + k.slice(1), k)).join('')}</div>`)}${panel('Upcoming outcomes across the class', 'Pending obligations remain visible beyond the configured end.', pendingEvents(10), button('events', 'All events', '', 'small'))}${decisionTimingPanel()}${panel('Audit trail', 'Accepted commands identify the actor and both clocks.', table(['Simulation / real time', 'Actor', 'Action', 'Result'], state.audit.slice(-30).reverse().map(a => [sortCell(`${simDate(a.hour)}<small>${new Date(a.realAt).toLocaleString('en-GB')}</small>`, a.hour), `${esc(a.actorName)}<small>${esc(a.role)}</small>`, esc(a.command.type), esc(a.result)])), button('replay', 'Export replay', '', 'small', !!solo || !!testRoom))}`;
+  return `<div class="grid2">${panel('The shared clock', '', adminClock())}${panel('Classroom access', 'Every student belongs to one company in this session.', `<div class="toolbar">${button('roster', 'Companies & join codes', '', 'primary', !!solo)}${button('create', 'New session', '', '', !!solo || !!testRoom)}${button('sessions', 'Switch session', '', 'small', !!solo)}</div><p class="form-note">Company join codes grant student membership only. Instructor previews are read-only. Team messages are visible only to members of that company.</p>`)}</div>${disruptionPanel()}${panel('Teaching capabilities', 'Visibility controls navigation. Permission controls new decisions. Model effects are separate.', `<div class="toggle-row"><span>Feature</span><span>Visibility &nbsp; / &nbsp; Permission</span></div>${FEATURES.map(f => `<form class="toggle-row" data-feature="${f}"><span>${esc(f.charAt(0).toUpperCase() + f.slice(1))}</span><div class="toolbar">${check('visible', 'Show', state.features[f].visible)}${check('allowed', 'Allow decisions', state.features[f].allowed)}${button('submit', 'Apply', '', 'small')}</div><div class="error" role="alert"></div></form>`).join('')}<form id="effects-form" class="toggle-row"><span>Model effect</span><div class="toolbar">${check('carbonDemand', 'Customer preference for lower carbon', state.effects.carbonDemand)}${button('submit', 'Apply', '', 'small')}</div><div class="error" role="alert"></div></form>`)}${panel('Scenario catalogues', 'Change future supply, transport, demand, and energy conditions. Accepted contracts keep their terms.', `<div class="toolbar">${['suppliers', 'routes', 'markets', 'energy'].map(k => button('catalog-list', k.charAt(0).toUpperCase() + k.slice(1), k)).join('')}</div>`)}${panel('Upcoming outcomes across the class', 'Pending obligations remain visible beyond the configured end.', pendingEvents(10), button('events', 'All events', '', 'small'))}${decisionTimingPanel()}${panel('Audit trail', 'Accepted commands identify the actor and both clocks.', table(['Simulation / real time', 'Actor', 'Action', 'Result'], state.audit.slice(-30).reverse().map(a => [sortCell(`${simDate(a.hour)}<small>${new Date(a.realAt).toLocaleString('en-GB')}</small>`, a.hour), `${esc(a.actorName)}<small>${esc(a.role)}</small>`, esc(a.command.type), esc(a.result)])), button('replay', 'Export replay', '', 'small', !!solo || !!testRoom))}`;
 }
 function modal(title, content, onSubmit, submitLabel = 'Confirm') {
   dialog.innerHTML = `<div class="dialog-toolbar"><span data-dialog-theme-slot></span><button class="close" data-action="close" aria-label="Close dialog">×</button></div><h2 id="dialog-title">${esc(title)}</h2>${onSubmit ? `<form id="modal-form">${content}<div class="error" role="alert"></div><div class="form-actions">${button('close', 'Cancel')}${button('submit', submitLabel, '', 'primary')}</div></form>` : content}`;
@@ -1580,6 +1645,8 @@ document.addEventListener('keydown', event => {
 });
 
 async function action(name, id) {
+  if (name === 'disruption-tab' && Object.hasOwn(disruptionTabs, id)) { disruptionTab = id; render(); return; }
+  if (name === 'disruption-preset') { await applyDisruption(id); return; }
   if (name === 'pane-wide' || name === 'pane-reset') {
     if (!Object.hasOwn(studentPanels, id)) return;
     if (name === 'pane-wide') panelLayouts.set(id, { ...panelLayouts.get(id), full: true }); else panelLayouts.delete(id);
@@ -1697,7 +1764,7 @@ async function action(name, id) {
     return;
   }
   if (name === 'nav') { page = id; if (id === 'admin' && preview) { preview = undefined; await load(); } else render(); return; }
-  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=6d0a76bc7770')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
+  if (name === 'solo') { solo = (await import('./src/solo.mjs?v=5b94b0092273')).soloAdapter(); sessionId = 'solo'; page = 'overview'; preview = undefined; await load(); return; }
   if (name === 'switch-solo') { solo.switchRole(isTeacher() ? 'student' : 'instructor'); preview = undefined; page = isTeacher() ? 'overview' : 'admin'; await load(); return; }
   if (name === 'demo') { await signIn(await api('/demo', { username: id })); return; }
   if (name === 'logout') { if (!solo && token) { try { await api('/logout', {}); } catch {} } if (firebaseClient?.user) await firebaseClient.logout(); solo = null; state = null; actor = null; user = null; token = ''; sessionId = null; sessionStorage.removeItem('studio-token'); selectSession(null); renderWelcome(); return; }
@@ -1875,7 +1942,7 @@ document.addEventListener('change', async event => {
 async function startWorkspace() {
   if (location.hash?.startsWith('#test=')) {
     const testLink = new URLSearchParams(location.hash.slice(1));
-    try { const client = (await import('./src/test-client.mjs?v=6d0a76bc7770')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
+    try { const client = (await import('./src/test-client.mjs?v=5b94b0092273')).testClient({roomId:testLink.get('test'),key:testLink.get('key')}); await enterTest(client); }
     catch(e) { root.innerHTML = '<main class="welcome"><h1>Test round unavailable</h1><p>' + esc(e.message) + '</p><div class="toolbar">' + (e.status === 403 ? button('retry-start', 'Try again', '', 'primary') : '') + button('test-leave','Return to classroom') + '</div></main>'; }
     return;
   }

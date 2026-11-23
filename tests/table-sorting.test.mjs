@@ -82,7 +82,7 @@ test('finance values, energy tariffs and audit times use raw values with clear c
  const finance=parsedRows(h.run('financePage()'));assert.deepEqual(finance[0].values,[744,'Repayment',-10001,'Scheduled']);assert.deepEqual(finance[1].values,['loan-1',100001,501,25,null]);assert.deepEqual(finance[2].values,['deposit-1',200000,50,26,194]);
  const energy=parsedRows(h.run('energyPage()'));assert.equal(typeof energy[0].values[1],'number');assert.match(h.run('energyPage()'),/sort by 00–08 tariff/);
  h.run("actor={id:'teacher',role:'instructor'};state.audit=[{hour:743,realAt:'2026-12-01T01:00:00Z',actorName:'Test',role:'student',command:{type:'offer'},result:'Accepted'}]");
- assert.equal(parsedRows(h.run('adminPage()'))[0].values[0],743);
+ assert.equal(parsedRows(h.run('adminPage()').split('<h2>Audit trail</h2>')[1])[0].values[0],743);
 });
 test('plain identifiers sort naturally, names are decoded, and row data cannot inject markup',()=>{
  const h=harness();assert.ok(h.run("compareTableValues('order-9','order-100','ascending')")<0);

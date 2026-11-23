@@ -69,7 +69,7 @@ function takeStock(c, item, qty) {
 function addStock(c, item, qty, value, carbon) {
   const stock = c.inventory[item]; stock.qty += qty; stock.value += value; stock.carbon += carbon;
 }
-function catalog() {
+export function catalog() {
   const suppliers = [];
   for (const [item, price, carbon, lot] of [['cell', 310, 2.2, 24], ['frame', 1800, 9, 1], ['controller', 2400, 6, 1]]) {
     suppliers.push({ id: `${item}-circular`, name: 'Circular Works · rail', item, price, carbon, freight: 0.3, fee: 4500, lead: 48, term: 120, reliability: 95, maxDelay: 6, stock: 1000 * lot, replenish: 150 * lot, min: 10 * lot, lot, enabled: true });
