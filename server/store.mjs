@@ -178,7 +178,7 @@ export class Store {
     const found = this.db.prepare("SELECT id FROM users WHERE username='demo-instructor'").get();
     if (found) return;
     const teacher = this.addUser('demo-instructor', 'Demo instructor', randomBytes(24).toString('hex'), 'instructor');
-    const s = this.create(teacher, { name: 'Sustainability Studio · demonstration' });
+    const s = this.create(teacher, { name: 'Sustainable Supply Chain Management · demonstration' });
     for (let i = 1; i <= 3; i++) {
       const u = this.addUser(`demo-student-${i}`, ['Alex · Helio', 'Sam · Northstar', 'Robin · Verdant'][i - 1], randomBytes(24).toString('hex'));
       this.db.prepare('INSERT INTO members VALUES (?,?,?)').run(s.id, u.id, `company-${i}`);

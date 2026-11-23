@@ -100,7 +100,7 @@ for (const temporary of [false, true]) {
       assert.equal(refreshed.run('report'),'emissions');
       assert.equal(refreshed.run('reportRange'),7);
       assert.equal(refreshed.run('channel'),'team:company-1');
-      assert.doesNotMatch(refreshed.root.innerHTML,/firebase-login-form|Sign in to your studio/);
+      assert.doesNotMatch(refreshed.root.innerHTML,/firebase-login-form|Sign in to your workspace/);
       if(page==='workspace') assert.ok(refreshed.root.innerHTML.indexOf('pane-inventory') < refreshed.root.innerHTML.indexOf('pane-finance'));
       assert.doesNotMatch([...original.values.values()].join(),/temporary-key|Test actor|cash/);
       if(!temporary) assert.deepEqual(refreshed.requests,['/me','/enter','/sessions/class-one']);

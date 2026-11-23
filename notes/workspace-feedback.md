@@ -9,4 +9,4 @@ Two agents reviewed the existing student workspace. All 54 baseline automated te
 | Stock quantity, capacity, and incoming orders were scattered across columns. | Inventory shows finished stock first and groups stock with capacity. It also shows average cost, outstanding purchases, and embodied carbon, with filters for finished stock and components. |
 | The assembly recipe needed a versioned update. | New sessions assemble a solar panel from 32 photo cells, one recycled frame, and two junction boxes. Existing sessions and historical replays use their original recipe. |
 
-Studio models stock overflow charges and production electricity. Its inventory table displays the quantities and costs tracked by its own engine.
+Sustainable Supply Chain Management models stock overflow charges and production electricity. Its inventory table displays the quantities and costs tracked by its own engine.

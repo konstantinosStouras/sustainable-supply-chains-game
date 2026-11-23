@@ -1,6 +1,6 @@
 # Project working instructions
 
-This directory contains the Sustainability Studio source.
+This directory contains the Sustainable Supply Chain Management source.
 
 Keep website changes, original supporting code, and public project notes in this repository. The user requests that completed updates be committed and pushed to GitHub. Review changes and run relevant checks before pushing; never commit unrelated work or secrets.
 

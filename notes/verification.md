@@ -1,6 +1,6 @@
 # Implementation verification — 12 November 2026
 
-This record covers the original Sustainability Studio implementation.
+This record covers the original Sustainable Supply Chain Management implementation.
 
 ## Automated checks
 

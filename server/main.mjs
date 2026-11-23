@@ -109,5 +109,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const host = process.env.HOST || '127.0.0.1', port = Number(process.env.PORT || 3000);
   if (demo && !['localhost', '127.0.0.1', '::1'].includes(host)) throw new Error('Demo sign-in is restricted to loopback. Use normal accounts for network deployment.');
   const { server } = createApp({ demo });
-  server.listen(port, host, () => console.log(`Sustainability Studio: http://${host}:${port}${demo ? ' (local demonstration access enabled)' : ''}`));
+  server.listen(port, host, () => console.log(`Sustainable Supply Chain Management: http://${host}:${port}${demo ? ' (local demonstration access enabled)' : ''}`));
 }

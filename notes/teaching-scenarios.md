@@ -1,4 +1,4 @@
-# Supply-chain experiments for Sustainability Studio
+# Supply-chain experiments for Sustainable Supply Chain Management
 
 These are proposed teaching experiments, not claims about the effects of actual policies. All rates, durations and shocks below are illustrative. The implementation status distinguishes existing controls, the Poisson-demand update, and extensions that have not been built.
 
