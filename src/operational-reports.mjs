@@ -1,5 +1,5 @@
-import { itemName } from './engine.mjs?v=f10964fe02db';
-import { supplyChainRows, supplierEvidence } from './supply-performance.mjs?v=f10964fe02db';
+import { itemName } from './engine.mjs?v=bf0482d7502e';
+import { supplyChainRows, supplierEvidence } from './supply-performance.mjs?v=bf0482d7502e';
 // Original reports derived from the authorized company view. Never infer or
 // expose competitors' private orders, customers, contracts or purchase records.
 export const operationalReports = {

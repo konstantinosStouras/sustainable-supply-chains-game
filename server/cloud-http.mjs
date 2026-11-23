@@ -1,3 +1,4 @@
+import { opponentProvider } from './opponent-provider.mjs';
 import { readExportForm, sendExport } from './export-download.mjs';
 import { readBody } from './read-body.mjs';
 import { fail } from '../src/engine.mjs';
@@ -35,7 +36,9 @@ export function createCloudHandler({ store, verifyFirebase, projectId, allowedOr
       if (path === '/api/logout' && req.method === 'POST') return send(200, { ok: true });
       if (path === '/api/enter' && req.method === 'POST') return send(200, await store.enter(user, body.sessionId, body.code));
       if (path === '/api/join' && req.method === 'POST') return send(200, await store.join(user, body.code));
-      if (path === '/api/sessions' && req.method === 'POST') return send(201, { id: (await store.create(user, body)).id });
+      const providerRoute = path.match(/^\/api\/opponents\/(models|profiles)$/);
+      if (providerRoute && req.method === 'POST') return send(200, await opponentProvider(user, body, providerRoute[1]));
+      if (path === '/api/sessions' && req.method === 'POST') return send(201, { id: (await store.create(user, { ...body, courseSettings: body.courseSettings ?? {} })).id });
       const match = path.match(/^\/api\/sessions\/([^/]+)(?:\/(command|roster|assign|replay|test-template|updates|typing))?$/);
       if (!match) fail('Not found.', 404);
       const [, id, action] = match;

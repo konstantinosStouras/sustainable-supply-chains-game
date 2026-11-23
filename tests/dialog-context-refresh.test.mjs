@@ -1,3 +1,4 @@
+import { supplierEvidence } from '../src/supply-performance.mjs';
 import { operationalReports, buildOperationalReport, businessUpdates } from '../src/operational-reports.mjs';
 import { createMessageSounds } from '../src/message-sounds.mjs';
 import test from 'node:test';
@@ -13,13 +14,13 @@ function harness(){
  const fields={'[name=qty]':control('30'),'[name=routeId]':control('rail'),'#dispatch-context':control(),'#dispatch-deadline':control(),'#dispatch-route-timing':control(),'#dispatch-terms':control(),'#dispatch-quote':control(),'#purchase-context':control(),'#purchase-quote':control()};
  const listeners={},form={querySelector:s=>fields[s],addEventListener:(type,fn)=>{listeners[type]=fn;}},dialog={open:true,querySelector:()=>form,close(){this.open=false;}};
  const document={activeElement:fields['[name=qty]'],querySelector:s=>s==='#dialog'?dialog:s==='#app'?{}:null,addEventListener(){}};
- const ctx=vm.createContext({ operationalReports, buildOperationalReport, businessUpdates, createMessageSounds,document,URL,AbortSignal,location:{hostname:'localhost',href:'http://localhost/'},localStorage:storage(),sessionStorage:storage(),crypto:{randomUUID},setTimeout:()=>1,clearTimeout(){},firebaseConfig:{},classroomBackend:'',FormData:class extends Map{constructor(){super([['qty',fields['[name=qty]'].value],['routeId',fields['[name=routeId]'].value]]);}},itemName:()=> 'frame',renders:0});
+ const ctx=vm.createContext({ supplierEvidence, operationalReports, buildOperationalReport, businessUpdates, createMessageSounds,document,URL,AbortSignal,location:{hostname:'localhost',href:'http://localhost/'},localStorage:storage(),sessionStorage:storage(),crypto:{randomUUID},setTimeout:()=>1,clearTimeout(){},firebaseConfig:{},classroomBackend:'',FormData:class extends Map{constructor(){super([['qty',fields['[name=qty]'].value],['routeId',fields['[name=routeId]'].value]]);}},itemName:()=> 'frame',renders:0});
  vm.runInContext(source,ctx);
  const run=code=>vm.runInContext(code,ctx);
  run(`actor={id:'synthetic-student',role:'student',companyId:'company-1'};user=actor;sessionId='synthetic-session';
   render=()=>{renders++;};updateConnectionNotice=()=>{};ensureSessionUpdates=()=>{};toast=()=>{};
   modal=(title,content,submit)=>{dialog.open=true;globalThis.lastTitle=title;globalThis.lastContent=content;globalThis.lastSubmit=submit;};`);
- const state={revision:1,hour:24,startDate:'2026-01-01T00:00:00Z',company:{id:'company-1',inventory:{panel:{qty:372}},orders:[{id:'order-110',originalQty:90,remaining:90,dueAt:84,payment:72}]},catalog:{routes:[{id:'rail',name:'Rail',enabled:true,hours:48,fixed:8000,unit:80,term:48,carbonFixed:30,carbonUnit:.2,reliability:95,maxDelay:6},{id:'road',name:'Road',enabled:true,hours:24,fixed:5000,unit:100,term:24,carbonFixed:40,carbonUnit:.3,reliability:90,maxDelay:4}],suppliers:[{id:'frame-circular',name:'Circular frames',item:'frame',enabled:true,price:1800,fee:4500,min:10,lot:1,stock:1000,lead:48,term:120,carbon:2,freight:.3}]}};
+ const state={revision:1,hour:24,startDate:'2026-01-01T00:00:00Z',company:{id:'company-1',purchases:[],inventory:{panel:{qty:372}},orders:[{id:'order-110',originalQty:90,remaining:90,dueAt:84,payment:72}]},catalog:{routes:[{id:'rail',name:'Rail',enabled:true,hours:48,fixed:8000,unit:80,term:48,carbonFixed:30,carbonUnit:.2,reliability:95,maxDelay:6},{id:'road',name:'Road',enabled:true,hours:24,fixed:5000,unit:100,term:24,carbonFixed:40,carbonUnit:.3,reliability:90,maxDelay:4}],suppliers:[{id:'frame-circular',name:'Circular frames',item:'frame',enabled:true,price:1800,fee:4500,min:10,lot:1,stock:1000,lead:48,term:120,carbon:2,freight:.3}]}};
  ctx.initial=state;run('state=initial;');
  return{ctx,run,state,fields,form,dialog,document,listeners};
 }

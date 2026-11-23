@@ -2,8 +2,9 @@
 export function testTemplate(initial, current) {
   return structuredClone({
     productId: initial.productId ?? 'earbuds', name: current.name, seed: initial.seed,
-    days: Math.max(1, Math.ceil((current.plannedEndHour || current.endHour || initial.endHour) / 24)),
-    companyNames: current.companies.map(c => c.name),
+    days: Math.max(1, Math.ceil((initial.course?.total || current.plannedEndHour || current.endHour || initial.endHour) / 24)),
+    ...(initial.course && { courseSettings: { phases: initial.course.plan, trainingHours: initial.course.trainingHours, benchmark: initial.course.benchmark } }),
+    companyNames: current.companies.filter(c => !c.bot).map(c => c.name),
     revenueAt: initial.accounting?.revenueAt || 'receipt',
     dailyCorporateOverhead: initial.accounting?.dailyCorporateOverhead || 0,
     dailyEnergyOverhead: initial.accounting?.dailyEnergyOverhead ?? 0,

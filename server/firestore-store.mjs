@@ -1,3 +1,4 @@
+import { teamVersions, sameTeamDecision } from '../src/phases.mjs';
 import { requireOpen, requireReadable } from './session-access.mjs';
 import { typingPresence } from '../src/typing-presence.mjs';
 import { waitForSessionUpdate } from './session-updates.mjs';
@@ -87,7 +88,7 @@ export class FirestoreStore {
     const encoded = encodeState(state), { chunks, ...info } = encoded;
     chunks.forEach((data, i) => tx.set(ref.collection('stateChunks').doc(String(i)), { data }));
     for (let i = chunks.length; i < (metadata.chunkCount || 0); i++) tx.delete(ref.collection('stateChunks').doc(String(i)));
-    tx.set(ref, { ...metadata, ...info, chunkCount: chunks.length, productId: state.productId ?? null, id: state.id, name: state.name, hour: state.hour, status: state.status, studentAccess: state.studentAccess !== false, messaging: state.features.messaging, revision: state.revision, nextTickAt });
+    tx.set(ref, { ...metadata, ...info, chunkCount: chunks.length, productId: state.productId ?? null, id: state.id, name: state.name, hour: state.hour, status: state.status, studentAccess: state.studentAccess !== false, messaging: state.features.messaging, revision: state.revision, teamVersions: teamVersions(state), nextTickAt });
   }
   log(tx, ref, actor, command, realAt, revision) {
     tx.create(ref.collection('commands').doc(String(revision).padStart(12, '0')), { actor, command, realAt, revision });
@@ -108,7 +109,7 @@ export class FirestoreStore {
   async create(user, opts = {}) {
     if (user.role !== 'instructor') fail('Instructor access required.', 403);
     const state = createSession({ ...opts, id: sessionId(opts.id, randomUUID) }), encoded = encodeState(state);
-    const ref = this.sessionRef(state.id), invites = state.companies.map(c => ({ code: randomBytes(12).toString('base64url'), companyId: c.id, sessionId: state.id }));
+    const ref = this.sessionRef(state.id), invites = state.companies.filter(c => !c.bot).map(c => ({ code: randomBytes(12).toString('base64url'), companyId: c.id, sessionId: state.id }));
     await this.db.runTransaction(async tx => {
       if ((await tx.get(ref)).exists) fail('Session ID is already taken. Choose another city or a custom ID.', 409);
       const metadata = { createdAt: this.now(), ownerId: user.id, initial: { codec: encoded.codec, bytes: encoded.bytes, digest: encoded.digest, chunkCount: encoded.chunks.length } };
@@ -286,7 +287,7 @@ export class FirestoreStore {
         // A paused classroom cannot accrue ticks. Reject obsolete decisions from
         // current metadata before copying and decoding its growing history. Keep
         // fresh authorization and exact-retry receipts ahead of this shortcut.
-        if (metadata.status !== 'running' && revision !== metadata.revision && !plainPause) fail('The session changed. Refreshed state is available; review and submit again.', 409);
+        if (metadata.status !== 'running' && revision !== metadata.revision && !plainPause && !sameTeamDecision(actor,request,metadata.teamVersions)) fail('The session changed. Refreshed state is available; review and submit again.', 409);
         const state = await this.readState(tx, ref, metadata);
         const previousHour = state.hour;
         const clockNow = this.now(), clock = advanceCloudClock(state, metadata.nextTickAt, clockNow);
@@ -302,7 +303,7 @@ export class FirestoreStore {
           // would roll back the ticks and allow a pause to discard elapsed time.
           return { clockAdvanced: true, retryPause: plainPause, advancedHours: state.hour - previousHour, remainingHours: state.endHour - state.hour };
         }
-        if (revision !== state.revision && !pauseAfterCatchup) fail('The session changed. Refreshed state is available; review and submit again.', 409);
+        if (revision !== state.revision && !pauseAfterCatchup && !sameTeamDecision(actor,request,teamVersions(state))) fail('The session changed. Refreshed state is available; review and submit again.', 409);
         if (plainPause && ['paused', 'completed'].includes(state.status)) {
           // Completion may occur during catch-up. A stop must never reopen it,
           // and an already stopped clock needs no extra simulation revision.
@@ -355,7 +356,7 @@ export class FirestoreStore {
         const doc = await tx.get(this.sessionRef(id));
         if (!doc.exists || doc.data().status === 'deleted') fail('Session not found.', 404);
         const metadata = doc.data();
-        if (metadata.status !== 'running' && revision !== metadata.revision && !isPlainPause(actor, metadata)) fail('The session changed. Refreshed state is available; review and submit again.', 409);
+        if (metadata.status !== 'running' && revision !== metadata.revision && !isPlainPause(actor, metadata) && !sameTeamDecision(actor,request,metadata.teamVersions)) fail('The session changed. Refreshed state is available; review and submit again.', 409);
         return null;
       }, { readOnly: true });
       if (previous) return previous.response;
@@ -376,7 +377,7 @@ export class FirestoreStore {
       if (!student.exists || student.data().role !== 'student' || !member.exists) fail('Student is not in this session.');
       const metadata = doc.data(), state = await this.readState(tx, ref, metadata);
       const command = { type: 'assignment', userId, companyId }, realAt = new Date(this.now()).toISOString();
-      if (!state.companies.some(c => c.id === companyId)) fail('Company not found.');
+      if (!state.companies.some(c => c.id === companyId && !c.bot)) fail('Company not found.');
       applyCommand(state, actor, command, realAt); assertInvariants(state);
       tx.update(this.memberRef(id, userId), { companyId });
       this.writeState(tx, ref, state, metadata, metadata.nextTickAt);

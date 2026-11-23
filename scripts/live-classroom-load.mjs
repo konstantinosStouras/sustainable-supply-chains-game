@@ -190,6 +190,16 @@ export async function runLiveLoad({ admin, db, apiKey, base, output, manifest, s
     // One explicit batch avoids the low per-second single-account delete quota.
     const deletion=await admin.deleteUsers(identities);
     assert.equal(deletion.failureCount,0,'Synthetic identity batch cleanup failed; retain manifest for recovery.');
+    for (let i=0;i<identities.length;i+=100) {
+      const batch=identities.slice(i,i+100).map(uid=>({uid}));
+      const remaining=await admin.getUsers(batch);
+      assert.equal(remaining.users.length,0,'A synthetic identity survived cleanup.');
+    }
+    for(const id of sessions){
+      assert.equal((await db.collection('studioSessions').doc(id).get()).exists,false);
+      for(const name of ['studioMembers','studioInvites','studioRequests'])
+        assert.equal((await db.collection(name).where('sessionId','==',id).limit(1).get()).empty,true);
+    }
     checks.cleaned=true;
     await saveResults();
     await writeFile(manifest,JSON.stringify({run,identities:[],sessions:[],cleaned:true}));

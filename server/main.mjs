@@ -1,3 +1,4 @@
+import { opponentProvider } from './opponent-provider.mjs';
 import { readExportForm, sendExport } from './export-download.mjs';
 import { readBody } from './read-body.mjs';
 import http from 'node:http';
@@ -25,7 +26,7 @@ export function createApp({ store = new Store(process.env.DATA_PATH || '.data/si
       if (url.pathname === '/api/health') return send(200, { ok: true, demo, version: 1, classroomAccounting: true, atomicSessionSettings: true, operatingCostSettings: true, pricingInventorySettings: true, inventoryWriteOff: true, sessionLifecycle: true, attachmentExport: true, testClassroom: true, typingPresence: true, auth: verifyFirebase ? 'firebase' : 'local-demo', projectId });
       if (!url.pathname.startsWith('/api/')) {
         if (req.method !== 'GET' && req.method !== 'HEAD') fail('Method not allowed.', 405);
-        const files = { '/': 'index.html', '/index.html': 'index.html', '/styles.css': 'styles.css', '/theme.css': 'theme.css', '/theme.mjs': 'theme.mjs', '/google-g.png': 'google-g.png', '/sscm-circle.svg': 'sscm-circle.svg', '/app.mjs': 'app.mjs', '/src/engine.mjs': 'src/engine.mjs', '/src/solo.mjs': 'src/solo.mjs', '/src/test-client.mjs': 'src/test-client.mjs', '/src/test-worker.mjs': 'src/test-worker.mjs', '/src/test-classroom.mjs': 'src/test-classroom.mjs', '/src/firebase-client.mjs': 'src/firebase-client.mjs', '/firebase-config.mjs': 'firebase-config.mjs', '/notes/model.md': 'notes/model.md' };
+        const files = { '/': 'index.html', '/index.html': 'index.html', '/styles.css': 'styles.css', '/theme.css': 'theme.css', '/theme.mjs': 'theme.mjs', '/google-g.png': 'google-g.png', '/sscm-circle.svg': 'sscm-circle.svg', '/app.mjs': 'app.mjs', '/src/phases.mjs': 'src/phases.mjs', '/src/opponents.mjs': 'src/opponents.mjs', '/src/engine.mjs': 'src/engine.mjs', '/src/solo.mjs': 'src/solo.mjs', '/src/test-client.mjs': 'src/test-client.mjs', '/src/test-worker.mjs': 'src/test-worker.mjs', '/src/test-classroom.mjs': 'src/test-classroom.mjs', '/src/firebase-client.mjs': 'src/firebase-client.mjs', '/firebase-config.mjs': 'firebase-config.mjs', '/notes/model.md': 'notes/model.md' };
         files['/src/supply-performance.mjs'] = 'src/supply-performance.mjs';
         files['/src/operational-reports.mjs'] = 'src/operational-reports.mjs';
         files['/src/message-sounds.mjs'] = 'src/message-sounds.mjs';
@@ -69,7 +70,9 @@ export function createApp({ store = new Store(process.env.DATA_PATH || '.data/si
       if (url.pathname === '/api/logout' && req.method === 'POST') { store.logout(token); return send(200, { ok: true }); }
       if (url.pathname === '/api/enter' && req.method === 'POST') return send(200, store.enter(user, body.sessionId, body.code));
       if (url.pathname === '/api/join' && req.method === 'POST') return send(200, store.join(user, body.code));
-      if (url.pathname === '/api/sessions' && req.method === 'POST') return send(201, { id: store.create(user, body).id });
+      const providerRoute = url.pathname.match(/^\/api\/opponents\/(models|profiles)$/);
+      if (providerRoute && req.method === 'POST') return send(200, await opponentProvider(user, body, providerRoute[1]));
+      if (url.pathname === '/api/sessions' && req.method === 'POST') return send(201, { id: store.create(user, { ...body, courseSettings: body.courseSettings ?? {} }).id });
       const match = url.pathname.match(/^\/api\/sessions\/([^/]+)(?:\/(command|roster|assign|replay|test-template|typing))?$/);
       if (!match) fail('Not found.', 404);
       const id = match[1], action = match[2];

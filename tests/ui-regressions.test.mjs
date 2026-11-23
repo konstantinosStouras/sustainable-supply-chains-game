@@ -1,3 +1,4 @@
+import { defaultPhases, phaseNames } from '../src/phases.mjs';
 import { operationalReports, buildOperationalReport, businessUpdates } from '../src/operational-reports.mjs';
 import { createMessageSounds } from '../src/message-sounds.mjs';
 import test from 'node:test';
@@ -19,7 +20,7 @@ function harness(hostname = 'localhost') {
     querySelector: selector => ({ '#app': root, '#dialog': dialog, '#toast': toast })[selector] || null,
     addEventListener: (type, handler) => { handlers[type] = handler; }
   };
-  const context = vm.createContext({
+  const context = vm.createContext({ defaultPhases, phaseNames,
     document, localStorage: storage(), sessionStorage: storage(), crypto: { randomUUID },
     setTimeout: () => 1, clearTimeout: () => {}, URL, AbortSignal,
     FormData: class extends Map { constructor(form) { super(form.values); } },
@@ -514,6 +515,7 @@ for (const mode of ['inline', 'modal']) for (const choice of ['oslo', 'custom'])
     const h = harness();
     h.form.id = mode === 'modal' ? 'modal-form' : 'create-session-form';
     h.form.values = [['name', 'Preserve class draft'], ['sessionCity', choice], ['customSessionId', 'QA-Custom-731'], ['days', '17'], ['companies', 'Draft Solar\nDraft Energy'], ['seed', '73'], ['revenueAt', 'dispatch'], ['corporateOverhead', '12.34']];
+    h.form.values.push(['include-main','on'],['mode-main','class'],['trainingHours','48']);
     const original = structuredClone(h.form.values), requests = [];
     let duplicate = true;
     h.context.apiImplementation = async (path, body) => {

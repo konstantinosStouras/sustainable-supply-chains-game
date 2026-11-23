@@ -51,7 +51,7 @@ test('120 students across 12 competing teams: HTTP contention, duplicate retries
   const { server } = createApp({ store, projectId: 'synthetic-only', verifyFirebase });
   const { call } = await listen(server);
   try {
-    const created = await call('/api/sessions', undefined, { id: 'synthetic-classroom', companyNames: names });
+    const created = await call('/api/sessions', undefined, { id: 'synthetic-classroom', companyNames: names, courseSettings: { phases: [{id:'main',mode:'class'}] } });
     assert.equal(created.status, 201);
     const id = created.body.id, endpoint = `/api/sessions/${id}`, roster = await call(endpoint + '/roster');
     const joins = await Promise.all(students.map((student, i) => call('/api/join', student, { code: roster.body.invites[i % 12].code })));

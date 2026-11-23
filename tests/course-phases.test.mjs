@@ -1,0 +1,85 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createSession, applyCommand, publicView, publicViewJSON, assertInvariants, products } from '../src/engine.mjs';
+import { teamVersions, sameTeamDecision, defaultPhases } from '../src/phases.mjs';
+import { bestPrice, appeal } from '../src/opponents.mjs';
+import { opponentProvider } from '../server/opponent-provider.mjs';
+const teacher = { role:'instructor', id:'t', name:'Instructor' };
+const student = i => ({ role:'student', companyId:'company-'+i, id:'u'+i, name:'Student '+i });
+const step = (s,i,hours) => applyCommand(s, student(i), {type:'teamStep',hours});
+for (const productId of Object.keys(products)) test(productId+' five-phase schedule, practice isolation, shared competition and accounting',()=>{
+  const s=createSession({productId,days:1,companyNames:['A','B'],courseSettings:{trainingHours:24,benchmark:true}});
+  assert.deepEqual(s.course.plan.map(p=>p.hours),[24,6,6,6,6]);
+  const initial=publicViewJSON(s,student(2));
+  applyCommand(s,student(1),{type:'deposit',amount:10000,term:24});step(s,1,8);
+  const rival=s.course.lanes['company-1'].world.companies[1];
+  assert.ok(rival.offers[0].price > 0);
+  assert.equal(publicView(s,student(2)).hour,0);
+  assert.equal(publicView(s,student(2)).company.deposits.length,0);
+  assert.ok(!initial.includes('"lanes"'));assert.ok(!publicViewJSON(s,student(2)).includes('"deposits":[{'));
+  assert.throws(()=>applyCommand(s,teacher,{type:'clock',status:'running'}),/independent/);
+  step(s,1,16);assert.equal(publicView(s,student(1)).course.waiting,true);
+  step(s,2,24);assert.equal(s.course.index,1);assert.equal(s.companies.length,3);
+  assert.equal(s.companies[0].deposits.length,0);
+  const bot=s.companies[2], market=s.catalog.markets[0], offer=bot.offers[0];
+  const price=bestPrice(s,market,bot,offer), stock=bot.inventory.panel;
+  const rivalScore=s.companies.slice(0,2).reduce((n,c)=>n+appeal(s,market,c,c.offers[0])/c.offers[0].price**2,0);
+  const A=appeal(s,market,bot,offer);
+  const objective=p=>(p-stock.value/stock.qty)*A/(A+rivalScore*p*p);
+  assert.ok(objective(price)>=objective(price-1)&&objective(price)>=objective(price+1));
+  assert.throws(()=>applyCommand(s,teacher,{type:'assignment',userId:'u',companyId:'benchmark'}),/Company/);
+  applyCommand(s,teacher,{type:'step',hours:6});assert.equal(s.course.index,2);
+  assert.equal(s.catalog.suppliers[0].reliability,70);
+  applyCommand(s,teacher,{type:'step',hours:6});assert.equal(s.catalog.markets[0].greenWeight,65);
+  const base=s.catalog.suppliers[0].price;applyCommand(s,teacher,{type:'step',hours:6});
+  assert.equal(s.catalog.suppliers[0].price,Math.round(base*1.3));
+  applyCommand(s,teacher,{type:'step',hours:6});assert.equal(s.status,'completed');
+  assert.equal(s.course.results.length,16);assertInvariants(s);
+});
+
+test('teams independently finish consecutive phases, retain assessed commitments and reopen final reports',()=>{
+  const s=createSession({days:3,companyNames:['A','B'],courseSettings:{phases:defaultPhases.filter(p=>p.id!=='training').map(p=>({...p,mode:'team'}))}});
+  applyCommand(s,student(1),{type:'deposit',amount:10000,term:24});
+  step(s,1,18);assert.equal(publicView(s,student(1)).course.index,1);assert.equal(publicView(s,student(2)).course.index,0);
+  assert.equal(publicView(s,student(1)).course.elapsed,0);assert.equal(publicView(s,student(1)).company.deposits.length,1);
+  for(const i of [1,2]) while(!publicView(s,student(i)).course.waiting && s.status!=='completed') step(s,i,18);
+  assert.equal(s.status,'completed');assert.equal(publicView(s,student(1)).company.deposits.length,1);
+  assert.equal(publicView(s,student(1)).course.results.length,8);
+  assert.throws(()=>step(s,1,1));assertInvariants(s);
+});
+test('one asynchronous class benchmark follows submitted quotes without holding back a team',()=>{
+  const s=createSession({days:1,companyNames:['A','B'],courseSettings:{benchmark:true,phases:[{id:'main',mode:'team'}]}});
+  step(s,1,24);assert.equal(s.course.references[0].world.hour,0);
+  step(s,2,8);assert.equal(s.course.references[0].world.hour,8);
+  assert.equal(publicView(s,student(2)).course.reference.length,1);
+  step(s,2,16);assert.equal(s.status,'completed');
+  const scores=s.course.results.filter(row=>row.companyId==='benchmark');
+  assert.equal(scores.length,1);assert.equal(scores[0].hour,24);
+});
+test('asynchronous submissions retain the reviewed team version across unrelated writes',()=>{
+  const s=createSession({companyNames:['A','B'],courseSettings:{}});
+  const versions=teamVersions(s);
+  const request={revision:0,teamVersion:versions['company-2'],command:{type:'deposit',amount:10000,term:24}};
+  step(s,1,8);
+  assert.equal(sameTeamDecision(student(2),request,teamVersions(s)),true);
+  assert.equal(sameTeamDecision(student(1),request,teamVersions(s)),false);
+  applyCommand(s,student(2),request.command);
+  assert.equal(sameTeamDecision(student(2),request,teamVersions(s)),false);
+  const current={...request,teamVersion:teamVersions(s)['company-2']};
+  applyCommand(s,teacher,{type:'configure',feature:'finance',visible:true,allowed:false});
+  assert.equal(sameTeamDecision(student(2),current,teamVersions(s)),false);
+});
+test('phase validation and legacy sessions',()=>{
+  assert.equal(createSession().course,undefined);
+  for(const phases of [[],[{id:'unknown',mode:'team'}],[defaultPhases[0],defaultPhases[0]]]) assert.throws(()=>createSession({courseSettings:{phases}}));
+});
+test('authenticated provider catalogs paginate, discard keys and use validated model output',async()=>{
+  const input={provider:'anthropic',key:'synthetic-test-key',model:'fixture',count:2,productId:'ebike'};
+  const pages=[{data:[{id:'first'}],has_more:true,last_id:'first'},{data:[{id:'second'}]},{content:[{type:'text',text:'[2, 6]'}]}];
+  const urls=[];const request=async(url,opts)=>{urls.push(url);assert.equal(opts.headers['x-api-key'],input.key);return Response.json(pages.shift());};
+  assert.deepEqual((await opponentProvider(teacher,input,'models',request)).models,['first','second']);
+  assert.match(urls[1],/after_id=first/);
+  const result=await opponentProvider(teacher,input,'profiles',request);
+  assert.deepEqual(result.profiles,[2,6]);assert.ok(!JSON.stringify(result).includes(input.key));
+  await assert.rejects(opponentProvider(student(1),input,'models',request),/Instructor/);
+});

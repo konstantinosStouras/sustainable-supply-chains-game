@@ -1,3 +1,4 @@
+import { teamVersions, sameTeamDecision } from '../src/phases.mjs';
 import { requireOpen, requireReadable } from './session-access.mjs';
 import { typingPresence } from '../src/typing-presence.mjs';
 import { testTemplate } from './test-template.mjs';
@@ -78,7 +79,7 @@ export class Store {
       if (this.db.prepare('SELECT 1 FROM sessions WHERE id=?').get(s.id)) fail('Session ID is already taken. Choose another city or a custom ID.', 409);
       const json = JSON.stringify(s); this.db.prepare('INSERT INTO sessions VALUES (?,?,?)').run(s.id, json, json);
       this.db.prepare('INSERT INTO members VALUES (?,?,NULL)').run(s.id, user.id);
-      for (const c of s.companies) this.db.prepare('INSERT INTO invites VALUES (?,?,?)').run(randomBytes(9).toString('base64url'), s.id, c.id);
+      for (const c of s.companies.filter(c => !c.bot)) this.db.prepare('INSERT INTO invites VALUES (?,?,?)').run(randomBytes(9).toString('base64url'), s.id, c.id);
       return s;
     });
   }
@@ -117,7 +118,7 @@ export class Store {
   }
   assign(user, sessionId, userId, companyId) {
     const actor = this.actor(user, sessionId); if (user.role !== 'instructor') fail('Instructor access required.', 403);
-    if (!this.session(sessionId).companies.some(c => c.id === companyId)) fail('Company not found.');
+    if (!this.session(sessionId).companies.some(c => c.id === companyId && !c.bot)) fail('Company not found.');
     const student = this.user(userId); if (student.role !== 'student') fail('Only student assignments can change.');
     if (!this.db.prepare('SELECT 1 FROM members WHERE sessionId=? AND userId=?').get(sessionId, userId)) fail('Student is not in this session.');
     return this.transaction(() => {
@@ -137,7 +138,7 @@ export class Store {
       const previous = this.db.prepare('SELECT * FROM requests WHERE userId=? AND key=?').get(user.id, key);
       if (previous) { if (previous.payload !== payload) fail('Request key already used for a different decision.', 409); return JSON.parse(previous.response); }
       const actor = this.actor(user, id), s = this.session(id);
-      if (revision !== s.revision) fail('The session changed. Refreshed state is available; review and submit again.', 409);
+      if (revision !== s.revision && !sameTeamDecision(actor, request, teamVersions(s))) fail('The session changed. Refreshed state is available; review and submit again.', 409);
       const realAt = new Date().toISOString(), message = applyCommand(s, actor, command, realAt); assertInvariants(s);
       this.save(s);
       this.db.prepare('INSERT INTO commands(sessionId,actor,command,realAt) VALUES (?,?,?,?)').run(id, JSON.stringify(actor), JSON.stringify(command), realAt);
