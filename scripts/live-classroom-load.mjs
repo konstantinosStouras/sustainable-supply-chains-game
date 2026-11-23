@@ -8,8 +8,9 @@ import { gunzipSync } from 'node:zlib';
 import { digest, decodeState } from '../server/cloud-state.mjs';
 import { assertInvariants } from '../src/engine.mjs';
 
-export async function runLiveLoad({ admin, db, apiKey, base, output, manifest, scenario, sessionOptions = {} }) {
+export async function runLiveLoad({ admin, db, apiKey, base, output, manifest, scenario, sessionOptions = {}, studentCount = 120 }) {
   assert.match(base, /^https:\/\/[a-z0-9.-]+\/api$/);
+  assert.ok(studentCount === 120 || (studentCount === 200 && scenario), 'The extended cohort requires a product scenario.');
   const run = `load-${Date.now()}-${randomBytes(4).toString('hex')}`;
   const identities = [], sessions = [], samples = [], checks = {};
   // Bounded sockets represent 120 students, each with a watch and an API call.
@@ -95,9 +96,9 @@ export async function runLiveLoad({ admin, db, apiKey, base, output, manifest, s
   let failure;
   try {
     const health = requireOk(await call('health','/health')); assert.equal(health.persistence,'firestore');
-    console.log('Creating 121 synthetic verified Firebase identities.');
+    console.log(`Creating ${studentCount + 1} synthetic verified Firebase identities.`);
     const teacher = await identity(0);
-    const students = await limit(Array.from({length:120},(_,i)=>i+1),5,identity);
+    const students = await limit(Array.from({length:studentCount},(_,i)=>i+1),5,identity);
     // Manifest the chosen ID before the POST: a lost create response must not
     // leave an untracked classroom behind after a successful server commit.
     sessions.push(run); await saveManifest();
@@ -107,7 +108,7 @@ export async function runLiveLoad({ admin, db, apiKey, base, output, manifest, s
     const joins = await limit(students,12,(student,i)=>call('join','/join',student,{code:roster.invites.find(x=>x.companyId===`company-${i%12+1}`).code}));
     joins.forEach(requireOk); summary('join');
     const members=requireOk(await call('roster',endpoint+'/roster',teacher)).members;
-    assert.equal(members.length,121);for(let i=1;i<=12;i++)assert.equal(members.filter(m=>m.companyId===`company-${i}`).length,10);
+    assert.equal(members.length,studentCount+1);for(let i=1;i<=12;i++)assert.equal(members.filter(m=>m.companyId===`company-${i}`).length,Math.floor((studentCount+12-i)/12));
     checks.membership=true;
     if(scenario) await scenario({run,students,teacher,endpoint,call,requireOk,checks,db,summary,session,samples,refreshIdentity,
       abortCall:(phase,path,who,body,options={})=>call(phase,path,who,body,options.timeoutMs??15000,{fault:'abort-after-send',abortAfterMs:options.abortAfterMs??50})});
