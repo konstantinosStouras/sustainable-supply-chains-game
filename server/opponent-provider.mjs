@@ -7,6 +7,8 @@ const hosts = {
   moonshot: 'https://api.moonshot.ai/v1', openrouter: 'https://openrouter.ai/api/v1', alibaba: 'https://dashscope-us.aliyuncs.com'
 };
 
+export const supportedProvider = provider => Object.hasOwn(hosts, provider);
+
 export async function opponentProvider(user, input, operation, request = fetch) {
   if (user.role !== 'instructor') fail('Instructor access required.', 403);
   const { provider, key, model } = input;

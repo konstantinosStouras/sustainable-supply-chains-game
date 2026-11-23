@@ -32,12 +32,13 @@ export function createCloudHandler({ store, verifyFirebase, projectId, allowedOr
         else { const data = (await readBody(req)).toString('utf8'); try { body = JSON.parse(data || '{}'); } catch { fail('Invalid JSON.'); } }
         if (!body || typeof body !== 'object' || Array.isArray(body)) fail('Expected a JSON object.');
       }
-      if (path === '/api/me' && req.method === 'GET') return send(200, { user, sessions: await store.list(user) });
+      if (path === '/api/me' && req.method === 'GET') return send(200, { user, sessions: await store.list(user), ...(user.role === "instructor" && store.aiSettings ? {aiSettings:await store.aiSettings(user)} : {}) });
       if (path === '/api/logout' && req.method === 'POST') return send(200, { ok: true });
       if (path === '/api/enter' && req.method === 'POST') return send(200, await store.enter(user, body.sessionId, body.code));
       if (path === '/api/join' && req.method === 'POST') return send(200, await store.join(user, body.code));
+      if (path === '/api/opponents/settings' && req.method === 'POST') return send(200,await store.aiSettings(user,body));
       const providerRoute = path.match(/^\/api\/opponents\/(models|profiles)$/);
-      if (providerRoute && req.method === 'POST') return send(200, await opponentProvider(user, body, providerRoute[1]));
+      if (providerRoute && req.method === 'POST') return send(200, await opponentProvider(user, { ...body, key:body.key || await store.savedProviderKey(user,body.provider) }, providerRoute[1]));
       if (path === '/api/sessions' && req.method === 'POST') return send(201, { id: (await store.create(user, { ...body, courseSettings: body.courseSettings ?? {} })).id });
       const match = path.match(/^\/api\/sessions\/([^/]+)(?:\/(command|roster|assign|replay|test-template|updates|typing))?$/);
       if (!match) fail('Not found.', 404);

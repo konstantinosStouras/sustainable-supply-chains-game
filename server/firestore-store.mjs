@@ -1,3 +1,4 @@
+import { supportedProvider } from './opponent-provider.mjs';
 import { teamVersions, sameTeamDecision } from '../src/phases.mjs';
 import { requireOpen, requireReadable } from './session-access.mjs';
 import { typingPresence } from '../src/typing-presence.mjs';
@@ -21,6 +22,33 @@ export class FirestoreStore {
     this.viewJSONIndex = new WeakMap(); this.viewJSONCache = new Map();
     this.viewJSONCacheBytes = 0; this.viewJSONCacheMaxBytes = viewJSONCacheMaxBytes;
     for (const name of ['Users', 'Sessions', 'Members', 'Invites', 'Requests']) this[name.toLowerCase()] = db.collection(prefix + name);
+  }
+  async aiSettings(user, change) {
+    if (user.role !== 'instructor') fail('Instructor access required.',403);
+    const ref = this.userRef(user.id).collection('private').doc('opponents');
+    const summarize = data => ({ defaultProvider:data.defaultProvider || '', models:Object.fromEntries(Object.entries(data.providers || {}).map(([id,p])=>[id,p.model])) });
+    if (!change) return summarize((await ref.get()).data() || {});
+    return this.db.runTransaction(async tx => {
+      const data = (await tx.get(ref)).data() || {providers:{},defaultProvider:''};
+      const {provider,model,key,remove} = change;
+      if (!supportedProvider(provider)) fail('Choose an AI provider.');
+      if (remove === true) {
+        delete data.providers[provider];
+        if (data.defaultProvider === provider) data.defaultProvider = '';
+      } else {
+        const secret = key || data.providers[provider]?.key;
+        if (typeof secret !== 'string' || !secret.trim() || secret.length > 4000 || /[\r\n]/.test(secret)) fail('Enter a valid provider key.');
+        if (typeof model !== 'string' || !model.trim() || model.length > 180) fail('Select a text-generation model.');
+        data.providers[provider] = {key:secret.trim(),model};
+        data.defaultProvider = provider;
+      }
+      tx.set(ref,data); return summarize(data);
+    });
+  }
+  async savedProviderKey(user,provider) {
+    if (user.role !== 'instructor' || !supportedProvider(provider)) fail('Instructor provider access required.',403);
+    const data = (await this.userRef(user.id).collection('private').doc('opponents').get()).data();
+    return data?.providers?.[provider]?.key;
   }
   userRef(id) { return this.users.doc(digest(id)); }
   memberRef(id, userId) { return this.members.doc(digest(JSON.stringify([id, userId]))); }
