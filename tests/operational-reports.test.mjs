@@ -62,7 +62,7 @@ test('balance sheet reconciles and forecast accumulates only committed scheduled
 test('component stock history reconstructs daily balances after receipts and production', () => {
   const s = fixture(); applyCommand(s, teacher, { type: 'step', hours: 48 });
   const view = publicView(s, student), rows = buildOperationalReport(view, 'stockHistory').rows.filter(r => r[0] === s.hour);
-  for (const [key, name] of [['cell', 'Photo cell'], ['frame', 'Recycled frame'], ['controller', 'Junction box'], ['panel', 'Solar panel']]) assert.equal(rows.find(r => r[1] === name)[2], view.company.inventory[key].qty);
+  for (const [key, name] of [['cell', 'Audio module pair'], ['frame', 'Earbud battery'], ['controller', 'Charging case'], ['panel', 'earbud set']]) assert.equal(rows.find(r => r[1] === name)[2], view.company.inventory[key].qty);
 });
 test('shared reports use closed snapshots and do not expose competitor transactions', () => {
   const s = fixture(); s.companies[1].orders[0].customer = 'PRIVATE-CUSTOMER';
@@ -122,7 +122,7 @@ test('manual write-offs reconcile stock, operating profit, embodied carbon and p
   assert.equal(stock.value, previous.value - value);
   assert.equal(after.company.profit, before.company.profit - value);
   assert.equal(after.company.emissions, before.company.emissions);
-  const waste = buildOperationalReport(after, 'waste').rows.find(row => row[0] === 'Recycled frame');
+  const waste = buildOperationalReport(after, 'waste').rows.find(row => row[0] === 'Earbud battery');
   assert.deepEqual(waste.slice(1), [2, value, previous.carbon * 2 / previous.qty]);
   assert.deepEqual(buildOperationalReport(after, 'stockHistory').rows, priorStock);
   assert.throws(() => applyCommand(s, student, { type: 'writeOff', item: 'frame', qty: stock.qty + 1 }));
@@ -149,4 +149,21 @@ test('KPI reports separate purchase fees, scheduled capacity, storage and profit
   assert.equal(buildOperationalReport(view, 'profitability').rows[0][2], null);
   applyCommand(s, student, { type: 'writeOff', item: 'frame', qty: 1 });
   assert.deepEqual(buildOperationalReport(publicView(s, student), 'warehouseCosts').rows[0], [24, excess, excess * 5]);
+});
+
+test('archived solar reports preserve component names, amounts and historical write-offs', () => {
+  const s = fixture();
+  applyCommand(s, student, { type: 'writeOff', item: 'frame', qty: 2 });
+  delete s.productId;
+  s.recipe = { cell: 32, frame: 1, controller: 2 };
+  const view = publicView(s, student);
+  assert.equal(view.status, 'archived');
+  const rows = buildOperationalReport(view, 'stockHistory').rows;
+  for (const name of ['Photo cell', 'Recycled frame', 'Junction box', 'Solar panel']) {
+    assert.ok(rows.some(row => row[1] === name));
+  }
+  assert.equal(buildOperationalReport(view, 'waste').rows.find(row => row[0] === 'Recycled frame')[1], 2);
+  const before = JSON.stringify(s);
+  assert.throws(() => applyCommand(s, teacher, { type: 'step', hours: 1 }), /read-only/);
+  assert.equal(JSON.stringify(s), before);
 });
